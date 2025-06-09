@@ -11,10 +11,10 @@ import org.jetbrains.exposed.sql.transactions.transaction
 object DatabaseFactory {
     fun init() {
         val config = HikariConfig().apply {
-            jdbcUrl = "jdbc:postgresql://localhost:5432/postgres"
+            jdbcUrl = "jdbc:postgresql://nozomi.proxy.rlwy.net:31973/railway"
             driverClassName = "org.postgresql.Driver"
             username = "postgres"
-            password = "root"
+            password = "KJsLfAZrZfTSkAONSUpbCAOXPXVsIUaf"
             maximumPoolSize = 10
             isAutoCommit = false
             transactionIsolation = "TRANSACTION_REPEATABLE_READ"
@@ -37,6 +37,7 @@ object DatabaseFactory {
             )
         }
     }
+
 
     suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
