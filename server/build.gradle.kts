@@ -7,18 +7,17 @@ plugins {
 
 application {
     mainClass.set("org.joan.project.ApplicationKt")
-
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true", "-Dconfig.file=application.conf")
+}
 
+// ✅ Configuración correcta del Toolchain de Java (JVM 21 para Railway)
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
 }
 
 tasks {
-    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_19)
-        }
-    }
-
     processResources {
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     }
@@ -66,10 +65,6 @@ dependencies {
 
     // BCrypt para hashing de contraseñas
     implementation("org.mindrot:jbcrypt:0.4")
-
-    // Java Time para fechas (si no lo tienes)
-    // implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
-
 }
 
 sourceSets {
