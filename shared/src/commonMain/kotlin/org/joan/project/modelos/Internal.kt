@@ -26,3 +26,12 @@ data class EmpleadoResponse(
     val usuario: String,
     val rol: String
 )
+
+data class LineaVenta(
+    val producto: ProductoResponse,
+    var cantidad: Int
+) {
+    val subtotal: Double get() = cantidad * producto.precio
+}
+
+

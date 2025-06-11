@@ -32,5 +32,11 @@ class ProductoService(private val client: HttpClient) {
         }.body()
     }
 
+    suspend fun eliminarProducto(id: Int, token: String) {
+        client.delete("${BASE_URL}/producto/$id") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+    }
+
 
 }

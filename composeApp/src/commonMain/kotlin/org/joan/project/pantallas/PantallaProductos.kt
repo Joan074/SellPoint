@@ -33,6 +33,10 @@ fun PantallaProductos(
     var filtroCategoria by remember { mutableStateOf<String?>(null) }
     var filtroProveedor by remember { mutableStateOf<String?>(null) }
 
+    // Nuevo: producto seleccionado para eliminar
+    var productoAEliminar by remember { mutableStateOf<ProductoResponse?>(null) }
+    var errorEliminar by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(Unit) {
         if (token != null) {
             productoViewModel.cargarProductos(token)
@@ -48,7 +52,7 @@ fun PantallaProductos(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp)
+            .padding(32.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -60,18 +64,23 @@ fun PantallaProductos(
             Text(
                 "Gestión de Productos",
                 style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 8.dp)
             )
-            Button(onClick = onCrearProductoClick) {
+            ElevatedButton(onClick = onCrearProductoClick) {
                 Icon(Icons.Default.Add, contentDescription = "Nuevo")
                 Spacer(Modifier.width(8.dp))
                 Text("Nuevo")
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
             OutlinedTextField(
                 value = filtroNombre,
                 onValueChange = { filtroNombre = it },
@@ -94,24 +103,57 @@ fun PantallaProductos(
             )
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
 
         LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            columns = GridCells.Adaptive(220.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
             modifier = Modifier.fillMaxSize()
         ) {
             items(productosFiltrados) { producto ->
                 ProductoItem(
                     producto = producto,
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { onEditarProductoClick(producto) }
+                    onClick = { onEditarProductoClick(producto) },
+                    onEliminarClick = { productoAEliminar = producto } // nuevo
                 )
             }
         }
     }
+
+    // Diálogo de confirmación de eliminación
+    if (productoAEliminar != null) {
+        AlertDialog(
+            onDismissRequest = { productoAEliminar = null },
+            title = { Text("¿Eliminar producto?") },
+            text = { Text("¿Estás seguro de que deseas eliminar \"${productoAEliminar!!.nombre}\"? Esta acción no se puede deshacer.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val id = productoAEliminar!!.id
+                    productoAEliminar = null
+                    if (token != null) {
+                        productoViewModel.eliminarProducto(id, token, {
+                            errorEliminar = null
+                        }, {
+                            errorEliminar = it
+                        })
+                    }
+                }) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { productoAEliminar = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
 }
+
+
 
 @Composable
 fun DropdownMenuFiltro(

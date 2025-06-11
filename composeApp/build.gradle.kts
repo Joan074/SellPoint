@@ -45,6 +45,8 @@ kotlin {
                 implementation("org.slf4j:slf4j-api:2.0.9")
                 implementation("ch.qos.logback:logback-classic:1.4.11")
                 implementation("io.github.qdsfdhvh:image-loader:1.4.0")
+                implementation("com.github.librepdf:openpdf:1.3.30")
+
 
             }
         }

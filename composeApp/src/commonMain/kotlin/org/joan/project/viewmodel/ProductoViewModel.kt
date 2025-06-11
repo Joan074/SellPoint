@@ -62,6 +62,24 @@ class ProductoViewModel(private val productoService: ProductoService) {
             }
         }
     }
+    fun eliminarProducto(
+        id: Int,
+        token: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        scope.launch {
+            try {
+                productoService.eliminarProducto(id, token)
+                _productos.value = _productos.value.filterNot { it.id == id }
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.message ?: "Error al eliminar el producto")
+            }
+        }
+    }
+
+
 
 
 

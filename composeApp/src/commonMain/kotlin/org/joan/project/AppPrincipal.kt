@@ -76,7 +76,11 @@ fun AppPrincipal(
                     onVolverClick = { pantalla = Pantalla.Listado }
                 )
 
-                Pantalla.Cobrar -> Text("Pantalla de Cobro")
+                Pantalla.Cobrar -> PantallaCobrar(
+                    authViewModel = authViewModel,
+                    productoViewModel = productoViewModel,
+                    onVolverClick = { pantalla = Pantalla.Inicio }
+                )
                 Pantalla.Proveedores -> Text("Pantalla de Proveedores")
                 Pantalla.Clientes -> Text("Pantalla de Clientes")
             }

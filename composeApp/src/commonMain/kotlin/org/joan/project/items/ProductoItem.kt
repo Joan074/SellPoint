@@ -18,11 +18,12 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 fun ProductoItem(
     producto: ProductoResponse,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit // ← Añadido
+    onClick: () -> Unit,
+    onEliminarClick: () -> Unit
 ) {
     Card(
         modifier = modifier
-            .clickable(onClick = onClick) // ← Soporte de clic
+            .clickable(onClick = onClick)
             .padding(4.dp),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -68,6 +69,19 @@ fun ProductoItem(
             Text("Stock: ${producto.stock}", style = MaterialTheme.typography.bodyMedium)
             Text("Categoría: ${producto.categoria.nombre}", style = MaterialTheme.typography.bodySmall)
             Text("Proveedor: ${producto.proveedor.nombre}", style = MaterialTheme.typography.bodySmall)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Stock: ${producto.stock}")
+                TextButton(onClick = onEliminarClick) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
+            }
+
+
+
         }
     }
 }

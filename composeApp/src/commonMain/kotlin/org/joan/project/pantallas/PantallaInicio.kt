@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -27,36 +28,26 @@ fun PantallaInicio(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Menú Principal",
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(vertical = 16.dp)
+            modifier = Modifier.padding(bottom = 32.dp)
         )
 
         LazyVerticalGrid(
-            columns = GridCells.Fixed(8),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            columns = GridCells.Adaptive(160.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            item {
-                TarjetaMenu("Productos", Icons.Default.Inventory, Pantalla.Listado, onSeleccion)
-            }
-            item {
-                TarjetaMenu("Cobrar", Icons.Default.PointOfSale, Pantalla.Cobrar, onSeleccion)
-            }
-            item {
-                TarjetaMenu("Proveedores", Icons.Default.LocalShipping, Pantalla.Proveedores, onSeleccion)
-            }
-            item {
-                TarjetaMenu("Clientes", Icons.Default.Person, Pantalla.Clientes, onSeleccion)
-            }
-            item {
-                TarjetaMenu("Reportes", Icons.Default.BarChart, Pantalla.Inicio, onSeleccion) // Aún no implementada
-            }
+            item { TarjetaMenu("Productos", Icons.Default.Inventory, Pantalla.Listado, onSeleccion) }
+            item { TarjetaMenu("Cobrar", Icons.Default.PointOfSale, Pantalla.Cobrar, onSeleccion) }
+            item { TarjetaMenu("Proveedores", Icons.Default.LocalShipping, Pantalla.Proveedores, onSeleccion) }
+            item { TarjetaMenu("Clientes", Icons.Default.Person, Pantalla.Clientes, onSeleccion) }
+            item { TarjetaMenu("Reportes", Icons.Default.BarChart, Pantalla.Inicio, onSeleccion) }
         }
     }
 }
@@ -70,37 +61,48 @@ fun TarjetaMenu(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val scale = animateFloatAsState(targetValue = if (isPressed) 0.97f else 1f, label = "cardScale")
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        label = "scale"
+    )
 
-    ElevatedCard(
+    Card(
         modifier = Modifier
             .graphicsLayer {
-                scaleX = scale.value
-                scaleY = scale.value
+                scaleX = scale
+                scaleY = scale
             }
-            .fillMaxWidth()
-            .aspectRatio(0.8f)
+            .aspectRatio(1f)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current
             ) { onClick(destino) },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(4.dp)
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
+                .padding(16.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(icono, contentDescription = null, modifier = Modifier.size(32.dp))
+            Icon(
+                imageVector = icono,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp)
+            )
             Spacer(modifier = Modifier.height(12.dp))
-            Text(titulo, fontSize = 16.sp)
+            Text(
+                text = titulo,
+                style = MaterialTheme.typography.titleMedium
+            )
         }
     }
 }
+
 

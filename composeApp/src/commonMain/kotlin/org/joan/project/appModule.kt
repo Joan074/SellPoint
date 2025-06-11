@@ -12,6 +12,9 @@ import org.joan.project.service.ProductoService
 import org.joan.project.viewmodel.AuthViewModel
 import org.joan.project.viewmodel.ProductoViewModel
 import org.koin.dsl.module
+import org.joan.project.service.VentaService
+import org.joan.project.viewmodel.VentaViewModel
+
 
 // AppModule.kt en commonMain
 val appModule = module {
@@ -42,9 +45,14 @@ val appModule = module {
         }
     }
 
+    // Servicios y ViewModels
     single { AuthService(get()) }
-    single { AuthViewModel(get()) } // <- ESTE es el cambio importante
+    single { AuthViewModel(get()) }
 
     single { ProductoService(get()) }
     single { ProductoViewModel(get()) }
+
+    single { VentaService(get()) }            // <- NUEVO
+    single { VentaViewModel(get()) }          // <- NUEVO
 }
+
