@@ -24,13 +24,15 @@ class ProductoRepository {
 
     suspend fun create(productoRequest: ProductoRequest): ProductoResponse = dbQuery {
         val insert = Productos.insert {
-              it[nombre] = productoRequest.nombre
-              it[precio] = productoRequest.precio.toBigDecimal()
-              it[stock] = productoRequest.stock
-              it[categoriaId] = productoRequest.categoriaId
-              it[proveedorId] = productoRequest.proveedorId
-              productoRequest.codigoBarras?.let { cb -> it[codigoBarras] = cb }
+            it[nombre] = productoRequest.nombre
+            it[precio] = productoRequest.precio.toBigDecimal()
+            it[stock] = productoRequest.stock
+            it[categoriaId] = productoRequest.categoriaId
+            it[proveedorId] = productoRequest.proveedorId
+            productoRequest.codigoBarras?.let { cb -> it[codigoBarras] = cb }
+            productoRequest.imagenUrl?.let { url -> it[Productos.imagenUrl] = url } // ← AÑADIDO
         }
+
 
         // Necesitamos hacer join para obtener nombres de categoría/proveedor
         (Productos.innerJoin(Categorias).innerJoin(Proveedores))
@@ -51,14 +53,16 @@ class ProductoRepository {
         }
 
         // Actualización del producto
-        val updatedRows = Productos.update({Productos.id eq id}) {
+        val updatedRows = Productos.update({ Productos.id eq id }) {
             it[nombre] = productoRequest.nombre
             it[precio] = productoRequest.precio.toBigDecimal()
             it[stock] = productoRequest.stock
             it[categoriaId] = productoRequest.categoriaId
             it[proveedorId] = productoRequest.proveedorId
             productoRequest.codigoBarras?.let { cb -> it[codigoBarras] = cb }
+            productoRequest.imagenUrl?.let { url -> it[imagenUrl] = url } // ← AÑADIDO
         }
+
 
         updatedRows > 0
     }
@@ -114,6 +118,7 @@ class ProductoRepository {
             precio = row[Productos.precio].toDouble(),
             stock = row[Productos.stock],
             codigoBarras = row[Productos.codigoBarras],
+            imagenUrl = row[Productos.imagenUrl], // ← AÑADIDO
             categoria = CategoriaSimpleResponse(
                 row[Categorias.id].value,
                 row[Categorias.nombre]
@@ -124,6 +129,7 @@ class ProductoRepository {
             )
         )
     }
+
 
 
 }

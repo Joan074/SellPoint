@@ -6,6 +6,7 @@ pluginManagement {
         google()
         mavenCentral()
         maven { url = uri("https://maven.pkg.jetbrains.space/public/p/ktor/maven") }
+        maven { url = uri("https://maven.pkg.jetbrains.space/public/p/compose/dev") } // <- añadido
     }
 }
 
@@ -14,7 +15,8 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven { url = uri("https://maven.pkg.jetbrains.space/public/p/ktor/maven") }
+        maven { url = uri("https://maven.pkg.jetbrains.space/public/p/compose/dev") } // <- añadido
     }
 }
 
-include(":server")
+include(":server", ":shared", ":composeApp")

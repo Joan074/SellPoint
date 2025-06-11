@@ -53,7 +53,7 @@ class EmpleadoRepository {
         }
     }
 
-    suspend fun crearEmpleado(request: EmpleadoRequest): EmpleadoResponse {
+    suspend fun crearEmpleado(request: EmpleadoRequest): EmpleadoResponse = dbQuery {
         if (usuarioExiste(request.usuario)) {
             throw IllegalArgumentException("El usuario '${request.usuario}' ya está en uso")
         }
@@ -66,13 +66,14 @@ class EmpleadoRepository {
             it[rol] = request.rol
         }
 
-        return EmpleadoResponse(
+        EmpleadoResponse(
             id = insert[Empleados.id].value,
             nombre = insert[Empleados.nombre],
             usuario = insert[Empleados.usuario],
             rol = insert[Empleados.rol]
         )
     }
+
 
 
     suspend fun actualizarEmpleado(id: Int, request: EmpleadoRequest): Boolean = dbQuery {

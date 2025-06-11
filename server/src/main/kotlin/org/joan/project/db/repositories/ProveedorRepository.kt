@@ -2,7 +2,6 @@ package org.joan.project.db.repositories
 
 import org.joan.project.db.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.joan.project.db.Proveedores
 import org.joan.project.db.entidades.ProveedorRequest
 import org.joan.project.db.entidades.ProveedorResponse

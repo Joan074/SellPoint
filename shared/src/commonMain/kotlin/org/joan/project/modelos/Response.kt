@@ -18,8 +18,10 @@ data class ProductoResponse(
     val stock: Int,
     val codigoBarras: String?,
     val categoria: CategoriaSimpleResponse,
-    val proveedor: ProveedorSimpleResponse
+    val proveedor: ProveedorSimpleResponse,
+    val imagenUrl: String? = null // 👈 Añadido
 )
+
 
 // VentaResponse.kt (Versión mejorada)
 @Serializable

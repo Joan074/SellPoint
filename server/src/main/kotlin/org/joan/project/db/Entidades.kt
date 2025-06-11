@@ -41,9 +41,11 @@ object Productos : IntIdTable() {
     val categoriaId = reference("categoria_id", Categorias)
     val proveedorId = reference("proveedor_id", Proveedores)
     val codigoBarras = varchar("codigo_barras", 50).nullable().uniqueIndex()
-    val activo = bool("activo").default(true) // Para borrado lógico
+    val imagenUrl = varchar("imagen_url", 500).nullable() // 👈 Añadido
+    val activo = bool("activo").default(true)
     val fechaCreacion = timestamp("fecha_creacion").defaultExpression(CurrentTimestamp())
 }
+
 
 object Ventas : IntIdTable("ventas") {
     val clienteId = integer("cliente_id").references(Clientes.id).nullable()

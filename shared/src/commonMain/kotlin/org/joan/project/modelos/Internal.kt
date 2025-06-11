@@ -1,6 +1,5 @@
 package org.joan.project.db.entidades
 
-import io.ktor.server.auth.*
 import kotlinx.serialization.Serializable
 
 // TokenResponse.kt
@@ -27,10 +26,3 @@ data class EmpleadoResponse(
     val usuario: String,
     val rol: String
 )
-
-data class EmpleadoPrincipal(
-    val id: Int,
-    val usuario: String,
-    val rol: String,
-    val token: String
-) : Principal

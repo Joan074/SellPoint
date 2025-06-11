@@ -7,12 +7,8 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.http.*
-import io.ktor.http.ContentDisposition.Companion.File
-import io.ktor.server.config.*
 import io.ktor.server.response.*
-import org.joan.project.db.entidades.EmpleadoPrincipal
 import org.joan.project.db.repositories.TokenRepository
-import java.io.File
 
 fun Application.configureSecurity(tokenRepo: TokenRepository) {
     val config = ConfigFactory.load().getConfig("ktor.jwt")

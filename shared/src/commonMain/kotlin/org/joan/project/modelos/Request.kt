@@ -40,7 +40,8 @@ data class ProductoRequest(
     val stock: Int,
     val categoriaId: Int,
     val proveedorId: Int,
-    val codigoBarras: String? = null
+    val codigoBarras: String? = null,
+    val imagenUrl: String? = null // ← AÑADIDO
 )
 
 

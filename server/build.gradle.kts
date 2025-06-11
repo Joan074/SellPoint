@@ -7,14 +7,19 @@ plugins {
 
 application {
     mainClass.set("org.joan.project.ApplicationKt")
-    applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true", "-Dconfig.file=application.conf")
+    applicationDefaultJvmArgs = listOf(
+        "-Dio.ktor.development=true",
+        "-Dconfig.file=application.conf"
+    )
 }
 
-// ✅ Configuración correcta del Toolchain de Java (JVM 21 para Railway)
+kotlin {
+    jvmToolchain(17)
+}
+
 java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
-    }
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 tasks {
@@ -23,7 +28,15 @@ tasks {
     }
 }
 
+sourceSets {
+    main {
+        resources.srcDir("src/main/resources")
+    }
+}
+
 dependencies {
+    implementation(project(":shared"))
+
     // Ktor Server Core
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.netty)
@@ -36,7 +49,7 @@ dependencies {
     // Autenticación
     implementation(libs.ktor.server.auth)
     implementation(libs.ktor.server.auth.jwt)
-    implementation(libs.bcrypt)
+    implementation("org.mindrot:jbcrypt:0.4")
 
     // Base de datos PostgreSQL + Exposed
     implementation(libs.postgresql)
@@ -46,29 +59,15 @@ dependencies {
     implementation(libs.exposed.java.time)
     implementation(libs.hikari.cp)
 
-    // MongoDB (opcional)
-    implementation(libs.kmongo.coroutine)
-    implementation(libs.mongodb.driver.kotlin.coroutine)
-
     // Utilidades
     implementation(libs.logback)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.ktor.serialization.kotlinx.json)
 
     // Testing
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.junit)
     testImplementation(libs.ktor.server.tests)
-
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.ktor.serialization.kotlinx.json)
-
-    // BCrypt para hashing de contraseñas
-    implementation("org.mindrot:jbcrypt:0.4")
-}
-
-sourceSets {
-    main {
-        resources.srcDir("src/main/resources")
-    }
 }

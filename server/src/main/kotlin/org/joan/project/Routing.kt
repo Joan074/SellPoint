@@ -10,6 +10,7 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.joan.project.db.EmpleadoPrincipal
 import org.joan.project.db.entidades.*
 import org.joan.project.db.repositories.*
 import java.time.LocalDate
@@ -234,31 +235,36 @@ fun Application.configureRouting(
                 }
 
                 post {
-                    val request = call.receive<ProductoRequest>()
-                    val creado = productoRepo.create(request)
-                    call.respond(HttpStatusCode.Created, creado)
+
+                    try {
+                        val request = call.receive<ProductoRequest>()
+                        val creado = productoRepo.create(request)
+                        call.respond(HttpStatusCode.Created, creado)
+                    } catch (e: IllegalArgumentException) {
+                        call.respond(HttpStatusCode.BadRequest, ErrorResponse(400, e.message ?: "Datos inválidos"))
+                    }
+
                 }
 
                 put("/{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
-                    val productoRequest = call.receive<ProductoRequest>()
-
+                    val request = call.receive<ProductoRequest>()
                     if (id == null) {
                         call.respond(HttpStatusCode.BadRequest, "ID inválido")
                         return@put
                     }
 
-                    try {
-                        val result = productoRepo.update(id, productoRequest)
-                        if (result) {
-                            call.respond(HttpStatusCode.OK, "Producto actualizado")
-                        } else {
-                            call.respond(HttpStatusCode.NotFound, "Producto no encontrado")
-                        }
-                    } catch (e: IllegalArgumentException) {
-                        call.respond(HttpStatusCode.BadRequest, e.message ?: "Error de validación")
-                    } catch (e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, "Error inesperado")
+                    val actualizado = productoRepo.update(id, request)
+                    if (!actualizado) {
+                        call.respond(HttpStatusCode.NotFound, "No se pudo actualizar")
+                        return@put
+                    }
+
+                    val productoActualizado = productoRepo.getById(id)
+                    if (productoActualizado != null) {
+                        call.respond(productoActualizado) // ✅ Devuelve JSON
+                    } else {
+                        call.respond(HttpStatusCode.InternalServerError, "No se pudo recuperar el producto actualizado")
                     }
                 }
 

@@ -2,15 +2,11 @@ package org.joan.project.db.repositories
 
 import org.joan.project.db.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.between
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.joan.project.db.DetalleVenta
 import org.joan.project.db.Productos
 import org.joan.project.db.Ventas
 import org.joan.project.db.entidades.*
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class ReporteRepository {
