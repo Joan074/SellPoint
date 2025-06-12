@@ -33,6 +33,11 @@ kotlin {
                 implementation(compose.components.resources)
                 implementation("org.jetbrains.compose.material:material-icons-extended:1.5.0")
 
+                implementation(compose.foundation)
+                implementation(compose.material3) // si usas Material3
+                implementation(compose.runtime)
+
+
                 implementation(project(":shared"))
             }
         }
@@ -46,6 +51,7 @@ kotlin {
                 implementation("ch.qos.logback:logback-classic:1.4.11")
                 implementation("io.github.qdsfdhvh:image-loader:1.4.0")
                 implementation("com.github.librepdf:openpdf:1.3.30")
+                implementation("com.itextpdf:itextpdf:5.5.13.3")
 
 
             }
@@ -64,3 +70,5 @@ compose.desktop {
         }
     }
 }
+
+

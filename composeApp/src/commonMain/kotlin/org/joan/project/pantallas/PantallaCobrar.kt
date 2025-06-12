@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.joan.project.db.entidades.LineaVenta
 import org.joan.project.db.entidades.VentaRequest
@@ -80,7 +81,7 @@ fun PantallaCobrar(
             Text(
                 "Punto de Venta",
                 style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(start = 8.dp)
+                fontWeight = FontWeight.Bold
             )
         }
 

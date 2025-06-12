@@ -47,7 +47,7 @@ fun PantallaInicio(
             item { TarjetaMenu("Cobrar", Icons.Default.PointOfSale, Pantalla.Cobrar, onSeleccion) }
             item { TarjetaMenu("Proveedores", Icons.Default.LocalShipping, Pantalla.Proveedores, onSeleccion) }
             item { TarjetaMenu("Clientes", Icons.Default.Person, Pantalla.Clientes, onSeleccion) }
-            item { TarjetaMenu("Reportes", Icons.Default.BarChart, Pantalla.Inicio, onSeleccion) }
+            item { TarjetaMenu("Reportes", Icons.Default.BarChart, Pantalla.ReporteVentas, onSeleccion) }
         }
     }
 }

@@ -1,5 +1,7 @@
+// AppPrincipal.kt
 package org.joan.project
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Logout
@@ -8,7 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.joan.project.db.entidades.EmpleadoResponse
-import org.joan.project.db.entidades.ProductoResponse
 import org.joan.project.pantallas.*
 import org.joan.project.viewmodel.AuthViewModel
 import org.joan.project.viewmodel.ProductoViewModel
@@ -38,51 +39,68 @@ fun AppPrincipal(
             )
         }
     ) { padding ->
-        Box(modifier = Modifier
-            .padding(padding)
-            .fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
 
-            when (val actual = pantalla) {
-                Pantalla.Inicio -> PantallaInicio { pantalla = it }
+            Crossfade(targetState = pantalla, label = "PantallaTransition") { actual ->
+                when (actual) {
+                    Pantalla.Inicio -> PantallaInicio { pantalla = it }
 
-                Pantalla.Listado -> PantallaProductos(
-                    authViewModel = authViewModel,
-                    productoViewModel = productoViewModel,
-                    onCrearProductoClick = { pantalla = Pantalla.Crear },
-                    onVolverClick = { pantalla = Pantalla.Inicio },
-                    onEditarProductoClick = {
-                        pantalla = Pantalla.Editar(it)
-                    }
-                )
+                    Pantalla.Listado -> PantallaProductos(
+                        authViewModel = authViewModel,
+                        productoViewModel = productoViewModel,
+                        onCrearProductoClick = { pantalla = Pantalla.Crear },
+                        onVolverClick = { pantalla = Pantalla.Inicio },
+                        onEditarProductoClick = {
+                            pantalla = Pantalla.Editar(it)
+                        }
+                    )
 
-                Pantalla.Crear -> PantallaCrearProducto(
-                    token = authViewModel.token.value ?: "",
-                    viewModel = productoViewModel,
-                    onProductoCreado = {
-                        productoViewModel.cargarProductos(authViewModel.token.value ?: "")
-                        pantalla = Pantalla.Listado
-                    },
-                    onVolverClick = { pantalla = Pantalla.Listado }
-                )
+                    Pantalla.Crear -> PantallaCrearProducto(
+                        token = authViewModel.token.value ?: "",
+                        viewModel = productoViewModel,
+                        onProductoCreado = {
+                            productoViewModel.cargarProductos(authViewModel.token.value ?: "")
+                            pantalla = Pantalla.Listado
+                        },
+                        onVolverClick = { pantalla = Pantalla.Listado }
+                    )
 
-                is Pantalla.Editar -> PantallaEditarProducto(
-                    producto = actual.producto,
-                    token = authViewModel.token.value ?: "",
-                    viewModel = productoViewModel,
-                    onProductoActualizado = {
-                        productoViewModel.cargarProductos(authViewModel.token.value ?: "")
-                        pantalla = Pantalla.Listado
-                    },
-                    onVolverClick = { pantalla = Pantalla.Listado }
-                )
+                    is Pantalla.Editar -> PantallaEditarProducto(
+                        producto = actual.producto,
+                        token = authViewModel.token.value ?: "",
+                        viewModel = productoViewModel,
+                        onProductoActualizado = {
+                            productoViewModel.cargarProductos(authViewModel.token.value ?: "")
+                            pantalla = Pantalla.Listado
+                        },
+                        onVolverClick = { pantalla = Pantalla.Listado }
+                    )
 
-                Pantalla.Cobrar -> PantallaCobrar(
-                    authViewModel = authViewModel,
-                    productoViewModel = productoViewModel,
-                    onVolverClick = { pantalla = Pantalla.Inicio }
-                )
-                Pantalla.Proveedores -> Text("Pantalla de Proveedores")
-                Pantalla.Clientes -> Text("Pantalla de Clientes")
+                    Pantalla.Cobrar -> PantallaCobrar(
+                        authViewModel = authViewModel,
+                        productoViewModel = productoViewModel,
+                        onVolverClick = { pantalla = Pantalla.Inicio }
+                    )
+
+                    Pantalla.Proveedores -> Text("Pantalla de Proveedores")
+                    Pantalla.Clientes -> Text("Pantalla de Clientes")
+
+                    Pantalla.ReporteVentas -> PantallaReporteVentas(
+                        onVolverClick = { pantalla = Pantalla.Inicio },
+                        onGraficosClick = { ventas -> pantalla = Pantalla.Graficos(ventas) }
+                    )
+
+
+                    is Pantalla.Graficos -> PantallaGraficosVentas(
+                        ventas = actual.ventas,
+                        onVolverClick = { pantalla = Pantalla.ReporteVentas }
+                    )
+
+                }
             }
         }
     }

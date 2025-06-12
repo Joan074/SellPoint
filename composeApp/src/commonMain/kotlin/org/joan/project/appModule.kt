@@ -8,6 +8,7 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
+import org.joan.project.service.AuthService
 import org.joan.project.service.ProductoService
 import org.joan.project.viewmodel.AuthViewModel
 import org.joan.project.viewmodel.ProductoViewModel
@@ -52,7 +53,8 @@ val appModule = module {
     single { ProductoService(get()) }
     single { ProductoViewModel(get()) }
 
-    single { VentaService(get()) }            // <- NUEVO
-    single { VentaViewModel(get()) }          // <- NUEVO
+    single { VentaService(get()) }
+    single { VentaViewModel(get()) }
+
 }
 

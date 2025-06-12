@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.joan.project.db.entidades.EmpleadoResponse
 import io.ktor.client.plugins.*
-import org.joan.project.AuthService
+import org.joan.project.service.AuthService
 import org.joan.project.db.entidades.ErrorResponse
 
 class AuthViewModel(
