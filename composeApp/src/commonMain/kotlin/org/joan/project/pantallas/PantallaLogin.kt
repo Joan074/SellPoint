@@ -21,10 +21,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.joan.project.viewmodel.AuthViewModel
 import org.joan.project.viewmodel.LoginState
 import org.koin.compose.koinInject
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.useResource
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.res.loadImageBitmap
+import java.io.InputStream
 
 @Composable
 fun PantallaLogin(
@@ -55,15 +60,7 @@ fun PantallaLogin(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                val logo: Painter? = runCatching { painterResource("logo_tpv.jpg") }.getOrNull()
-                logo?.let {
-                    Image(
-                        painter = it,
-                        contentDescription = "Logo TPV",
-                        modifier = Modifier.size(90.dp),
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
-                    )
-                }
+                MostrarLogo()
 
                 Text(
                     text = "Iniciar Sesión",
@@ -154,5 +151,25 @@ fun PantallaLogin(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun MostrarLogo() {
+    // Carga segura del recurso 'logo.png' desde resources
+    val logo: Painter? = runCatching {
+        BitmapPainter(useResource("logo.png") { inputStream: InputStream ->
+            loadImageBitmap(inputStream)
+        })
+    }.getOrNull()
+
+    if (logo != null) {
+        Image(
+            painter = logo,
+            contentDescription = "Logo de la app",
+            modifier = Modifier.size(90.dp) // tamaño adecuado para que no ocupe todo el espacio
+        )
+    } else {
+        Text("No se pudo cargar la imagen")
     }
 }

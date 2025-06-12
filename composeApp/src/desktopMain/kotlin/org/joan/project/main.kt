@@ -7,10 +7,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import org.jetbrains.compose.resources.painterResource
 import org.joan.project.pantallas.PantallaLogin
 import org.joan.project.viewmodel.AuthViewModel
 import org.koin.compose.koinInject
@@ -35,7 +37,9 @@ fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
         title = "SellPoint TPV",
-        state = rememberWindowState(width = 1200.dp, height = 800.dp)
+        state = rememberWindowState(width = 1200.dp, height = 800.dp),
+        icon = painterResource("logo.png") // ruta a tu icono dentro de resources
+
     ) {
         MaterialTheme(
             colorScheme = lightColorScheme(
