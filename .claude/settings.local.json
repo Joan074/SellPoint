@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(python3:*)",
+      "Bash(node:*)",
+      "Bash(cd:*)",
+      "Bash(mkdir:*)",
+      "Bash(unzip -j inter_download.zip \"*.ttf\" -d /tmp/inter_ttf)",
+      "Read(//tmp/**)",
+      "Bash(unzip:*)",
+      "Bash(FONT_DIR=\"C:/Users/villa/Desktop/SellPoint-main/composeApp/src/commonMain/composeResources/font\")",
+      "Read(//c/Users/villa/Desktop/SellPoint-main/**)",
+      "Bash(./gradlew :composeApp:run 2>&1 | tail -100)",
+      "Bash(./gradlew :composeApp:compileKotlinDesktop 2>&1 | grep -E \"^e:|error:|FAILED|BUILD\" | head -40)"
+    ]
+  }
+}
