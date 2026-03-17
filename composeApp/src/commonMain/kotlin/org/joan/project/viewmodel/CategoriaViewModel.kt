@@ -24,6 +24,11 @@ class CategoriaViewModel(
     val error: StateFlow<String?> = _error
 
     fun cargarCategorias(token: String) {
+        if (token == DEMO_TOKEN) {
+            _categorias.value = CATEGORIAS_DEMO.sortedBy { it.nombre.lowercase() }
+            _cargando.value = false
+            return
+        }
         scope.launch {
             _cargando.value = true
             _error.value = null

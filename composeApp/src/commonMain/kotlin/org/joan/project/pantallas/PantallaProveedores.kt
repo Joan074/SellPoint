@@ -69,10 +69,12 @@ fun PantallaProveedores(
         }
     }
 
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val isSmall = maxWidth < 1024.dp
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(18.dp)
+            .padding(if (isSmall) 10.dp else 18.dp)
     ) {
         // Header
         Row(
@@ -160,6 +162,7 @@ fun PantallaProveedores(
             }
         }
     }
+    } // BoxWithConstraints
 
     // --- Diálogo Crear/Editar ---
     if (showForm) {

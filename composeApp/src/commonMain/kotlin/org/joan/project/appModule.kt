@@ -10,6 +10,7 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import org.joan.project.service.*
 import org.joan.project.viewmodel.*
+import org.joan.project.viewmodel.NegocioViewModel
 import org.koin.dsl.module
 import org.koin.core.scope.get
 
@@ -58,6 +59,9 @@ val appModule = module {
 
     single { CategoriaService(get()) }
     single { CategoriaViewModel(get()) }
+
+    single { NegocioViewModel(get()) }
+    single { ClienteViewModel() }
 
 
 

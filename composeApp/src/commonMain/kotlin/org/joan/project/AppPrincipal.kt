@@ -12,6 +12,8 @@ import org.joan.project.db.entidades.EmpleadoResponse
 import org.joan.project.pantallas.*
 import org.joan.project.viewmodel.AuthViewModel
 import org.joan.project.viewmodel.CategoriaViewModel
+import org.joan.project.viewmodel.ClienteViewModel
+import org.joan.project.viewmodel.NegocioViewModel
 import org.joan.project.viewmodel.ProductoViewModel
 import org.joan.project.viewmodel.ProveedorViewModel
 import org.koin.compose.koinInject
@@ -26,6 +28,8 @@ fun AppPrincipal(
     val productoViewModel: ProductoViewModel = koinInject()
     val proveedorViewModel: ProveedorViewModel = koinInject()
     val categoriaViewModel: CategoriaViewModel = koinInject()
+    val negocioViewModel: NegocioViewModel = koinInject()
+    val clienteViewModel: ClienteViewModel = koinInject()
 
     var pantalla by remember { mutableStateOf<Pantalla>(Pantalla.Inicio) }
 
@@ -59,7 +63,8 @@ fun AppPrincipal(
                         onCerrarSesion = {
                             authViewModel.logout()
                             pantalla = Pantalla.Login
-                        }
+                        },
+                        onAjustesClick = { pantalla = Pantalla.AjustesNegocio }
                     )
 
 
@@ -104,7 +109,16 @@ fun AppPrincipal(
                     )
 
 
-                    Pantalla.Clientes -> Text("Pantalla de Clientes")
+                    Pantalla.AjustesNegocio -> PantallaAjustesNegocio(
+                        negocioViewModel = negocioViewModel,
+                        onVolverClick = { pantalla = Pantalla.Inicio }
+                    )
+
+                    Pantalla.Clientes -> PantallaClientes(
+                        authViewModel   = authViewModel,
+                        clienteViewModel = clienteViewModel,
+                        onVolverClick   = { pantalla = Pantalla.Inicio }
+                    )
                     Pantalla.ReporteVentas -> PantallaReporteVentas(
                         onVolverClick = { pantalla = Pantalla.Inicio },
                         onGraficosClick = { ventas -> pantalla = Pantalla.Graficos(ventas) }

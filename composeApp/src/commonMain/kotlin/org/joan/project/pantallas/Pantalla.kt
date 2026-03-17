@@ -14,6 +14,6 @@ sealed class Pantalla {
     object Clientes : Pantalla()
     object ReporteVentas : Pantalla()
     data class Graficos(val ventas: List<VentaResponse>) : Pantalla()
-
+    object AjustesNegocio : Pantalla()
 }
 

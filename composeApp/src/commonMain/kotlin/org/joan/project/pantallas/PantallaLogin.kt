@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -32,13 +33,16 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.joan.project.viewmodel.AuthViewModel
 import org.joan.project.viewmodel.LoginState
+import org.joan.project.viewmodel.NegocioViewModel
 import org.koin.compose.koinInject
+import java.io.File
 import java.io.InputStream
 
 @Composable
 fun PantallaLogin(
     onLoginSuccess: () -> Unit,
-    authViewModel: AuthViewModel = koinInject()
+    authViewModel: AuthViewModel = koinInject(),
+    negocioViewModel: NegocioViewModel = koinInject()
 ) {
     // Estado UI
     var usuario by remember { mutableStateOf("") }
@@ -48,6 +52,7 @@ fun PantallaLogin(
     var attempted by remember { mutableStateOf(false) }
 
     val loginState by authViewModel.loginState.collectAsState()
+    val negocio by negocioViewModel.datos.collectAsState()
     val isLoading = loginState is LoginState.Loading
     val focusManager = LocalFocusManager.current
     val snackbar = remember { SnackbarHostState() }
@@ -113,7 +118,12 @@ fun PantallaLogin(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
-                    LogoRedondo()
+                    LogoRedondo(logoPath = negocio.logoPath)
+                    Text(
+                        negocio.nombre,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
 
                     Text(
                         "Iniciar Sesión",
@@ -247,11 +257,19 @@ fun PantallaLogin(
 
 /* ---------- Logo redondo con fondo suave ---------- */
 @Composable
-private fun LogoRedondo() {
-    val logoPainter = remember {
-        runCatching {
-            BitmapPainter(useResource("logo.png") { input: InputStream -> loadImageBitmap(input) })
-        }.getOrNull()
+private fun LogoRedondo(logoPath: String? = null) {
+    val logoPainter = remember(logoPath) {
+        if (logoPath != null) {
+            // Logo personalizado desde archivo
+            runCatching {
+                BitmapPainter(File(logoPath).inputStream().buffered().use { loadImageBitmap(it) })
+            }.getOrNull()
+        } else {
+            // Fallback al recurso logo.png del classpath
+            runCatching {
+                BitmapPainter(useResource("logo.png") { input: InputStream -> loadImageBitmap(input) })
+            }.getOrNull()
+        }
     }
 
     Box(
@@ -262,10 +280,14 @@ private fun LogoRedondo() {
         contentAlignment = Alignment.Center
     ) {
         if (logoPainter != null) {
-            Image(painter = logoPainter, contentDescription = "Logo", modifier = Modifier.size(56.dp))
+            Image(painter = logoPainter, contentDescription = "Logo", modifier = Modifier.size(64.dp))
         } else {
-            // fallback mínimo
-            Text("LOGO", style = MaterialTheme.typography.labelLarge)
+            Icon(
+                Icons.Default.Store,
+                contentDescription = "Logo",
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

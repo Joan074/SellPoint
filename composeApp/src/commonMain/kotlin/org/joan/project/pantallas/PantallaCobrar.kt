@@ -27,9 +27,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import org.joan.project.db.entidades.ClienteResponse
 import org.joan.project.db.entidades.LineaVenta
 import org.joan.project.db.entidades.VentaRequest
 import org.joan.project.viewmodel.AuthViewModel
+import org.joan.project.viewmodel.ClienteViewModel
+import org.joan.project.viewmodel.NegocioViewModel
 import org.joan.project.viewmodel.ProductoViewModel
 import org.joan.project.viewmodel.VentaViewModel
 import org.joan.project.visual.generarTicketPDF
@@ -48,12 +51,16 @@ fun PantallaCobrar(
     productoViewModel: ProductoViewModel = koinInject(),
     authViewModel: AuthViewModel = koinInject(),
     ventaViewModel: VentaViewModel = koinInject(),
+    negocioViewModel: NegocioViewModel = koinInject(),
+    clienteViewModel: ClienteViewModel = koinInject(),
     onVolverClick: () -> Unit
 ) {
-    val productos by productoViewModel.productos.collectAsState()
-    val ventas by ventaViewModel.ventas.collectAsState()
-    val token = authViewModel.token.value
+    val productos  by productoViewModel.productos.collectAsState()
+    val ventas     by ventaViewModel.ventas.collectAsState()
+    val clientes   by clienteViewModel.clientes.collectAsState()
+    val token      = authViewModel.token.value
     val currentUser = authViewModel.currentUser.collectAsState().value
+    val negocio    by negocioViewModel.datos.collectAsState()
 
     // --- Sistema multi-ticket ---
     // Siempre hay al menos un ticket abierto
@@ -70,17 +77,23 @@ fun PantallaCobrar(
     var metodoPago by remember { mutableStateOf("EFECTIVO") }
     var efectivoEntregado by remember { mutableStateOf<Double?>(null) }
 
+    // Cliente
+    var clienteSeleccionado by remember { mutableStateOf<ClienteResponse?>(null) }
+    var mostrarSelectorCliente by remember { mutableStateOf(false) }
+
     // UI
     val snackbar = remember { SnackbarHostState() }
     var error by remember { mutableStateOf<String?>(null) }
     var resumenAbierto by remember { mutableStateOf(false) }
     var ultimaVenta by remember { mutableStateOf<VentaRequest?>(null) }
+    var ultimoNombreCliente by remember { mutableStateOf<String?>(null) }
     var abrirDialogoDescuento by remember { mutableStateOf(false) }
 
     // carga inicial
     LaunchedEffect(Unit) {
         if (token != null) {
             if (productos.isEmpty()) productoViewModel.cargarProductos(token)
+            if (clientes.isEmpty()) clienteViewModel.cargarClientes(token)
             val hoy = Clock.System.todayIn(TimeZone.currentSystemDefault())
             ventaViewModel.cargarVentasEntreFechas(token, hoy, hoy)
         }
@@ -115,6 +128,8 @@ fun PantallaCobrar(
     fun cambio(): Double = (efectivoEntregado ?: 0.0) - totalAPagar()
 
     // --- UI ---
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val isSmall = maxWidth < 1024.dp
     Scaffold(
         topBar = {
             TopAppBar(
@@ -145,7 +160,7 @@ fun PantallaCobrar(
                     if (carrito.isEmpty()) return@BarraCobro
 
                     val req = VentaRequest(
-                        clienteId = null,
+                        clienteId = clienteSeleccionado?.id,
                         empleadoId = emp.id,
                         metodoPago = metodoPago,
                         descuento = descuentoImporte(subtotalCarrito()), // importe total de descuento aplicado
@@ -167,6 +182,7 @@ fun PantallaCobrar(
                                 ventaViewModel.cargarVentasEntreFechas(t, hoy, hoy)
                             }
                             ultimaVenta = req
+                            ultimoNombreCliente = clienteSeleccionado?.nombre
                             // Cierra el ticket activo; si hay más de uno lo elimina,
                             // si es el único lo vacía pero lo conserva
                             if (tickets.size > 1) {
@@ -176,6 +192,7 @@ fun PantallaCobrar(
                                 tickets[0].clear()
                             }
                             categoria = null
+                            clienteSeleccionado = null
                             descuentoGlobalPct = 0.0
                             descuentoGlobalEur = 0.0
                             efectivoEntregado = null
@@ -184,7 +201,8 @@ fun PantallaCobrar(
                         onError = { error = it }
                     )
                 },
-                cobrarHabilitado = carrito.isNotEmpty()
+                cobrarHabilitado = carrito.isNotEmpty(),
+                isSmall = isSmall
             )
         },
         snackbarHost = { SnackbarHost(snackbar) }
@@ -232,6 +250,37 @@ fun PantallaCobrar(
                     }
                 }
                 Spacer(Modifier.height(6.dp))
+
+                // ── Selector de cliente ───────────────────────────────────────
+                OutlinedButton(
+                    onClick  = { mostrarSelectorCliente = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = MaterialTheme.shapes.medium
+                ) {
+                    Icon(Icons.Default.Person, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        clienteSeleccionado?.nombre ?: "Cliente básico",
+                        modifier = Modifier.weight(1f),
+                        style    = MaterialTheme.typography.bodyMedium
+                    )
+                    if (clienteSeleccionado != null) {
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            Icons.Default.Cancel,
+                            contentDescription = "Quitar cliente",
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clickable { clienteSeleccionado = null },
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Icon(Icons.Default.ArrowDropDown, null, Modifier.size(18.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(6.dp))
+
                 // weight(1f) hace que la card ocupe todo el espacio vertical restante
                 ElevatedCard(Modifier.fillMaxWidth().weight(1f)) {
                     if (carrito.isEmpty()) {
@@ -375,7 +424,7 @@ fun PantallaCobrar(
 
                 // --- PRODUCTOS (ocupa todo el espacio disponible) ---
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(150.dp),
+                    columns = GridCells.Adaptive(if (isSmall) 120.dp else 160.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.weight(1f).fillMaxWidth()
@@ -386,6 +435,7 @@ fun PantallaCobrar(
                             precio = p.precio,
                             stock = p.stock,
                             imagenUrl = p.imagenUrl,
+                            isSmall = isSmall,
                             onClick = {
                                 val idx = carrito.indexOfFirst { it.producto.id == p.id }
                                 if (idx >= 0) {
@@ -418,10 +468,10 @@ fun PantallaCobrar(
                                 label = {
                                     Text(
                                         "Todas (${productos.size})",
-                                        style = MaterialTheme.typography.bodyLarge
+                                        style = if (isSmall) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyLarge
                                     )
                                 },
-                                modifier = Modifier.height(48.dp)
+                                modifier = Modifier.height(if (isSmall) 36.dp else 48.dp)
                             )
                         }
                         items(categorias, key = { it }) { cat ->
@@ -431,10 +481,10 @@ fun PantallaCobrar(
                                 label = {
                                     Text(
                                         "$cat (${catCounts[cat] ?: 0})",
-                                        style = MaterialTheme.typography.bodyLarge
+                                        style = if (isSmall) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyLarge
                                     )
                                 },
-                                modifier = Modifier.height(48.dp)
+                                modifier = Modifier.height(if (isSmall) 36.dp else 48.dp)
                             )
                         }
                     }
@@ -447,6 +497,16 @@ fun PantallaCobrar(
         // errores & snack
         error?.let {
             LaunchedEffect(it) { snackbar.showSnackbar(it); error = null }
+        }
+
+        // Selector de cliente
+        if (mostrarSelectorCliente) {
+            ClienteSelectorDialog(
+                clientes          = clientes,
+                seleccionado      = clienteSeleccionado,
+                onDismiss         = { mostrarSelectorCliente = false },
+                onSeleccionar     = { clienteSeleccionado = it; mostrarSelectorCliente = false }
+            )
         }
 
         // Diálogo de descuento
@@ -477,6 +537,7 @@ fun PantallaCobrar(
                     title = { Text("Venta completada") },
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Cliente: ${ultimoNombreCliente ?: "Cliente básico"}")
                             Text("Método: ${ultimaVenta!!.metodoPago}")
                             Divider()
                             ultimaVenta!!.items.forEach { item ->
@@ -499,7 +560,7 @@ fun PantallaCobrar(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(onClick = {
                                 val archivo = File("ticket_${System.currentTimeMillis()}.pdf")
-                                generarTicketPDF(ultimaVenta!!, productos, archivo)
+                                generarTicketPDF(ultimaVenta!!, productos, archivo, currentUser?.nombre ?: "", negocio, ultimoNombreCliente)
                                 Desktop.getDesktop().open(archivo)
                                 resumenAbierto = false
                             }) { Text("Imprimir ticket") }
@@ -510,6 +571,7 @@ fun PantallaCobrar(
             }
         }
     }
+    } // BoxWithConstraints
 }
 
 /* ---------- Componentes ---------- */
@@ -560,12 +622,13 @@ private fun ProductoCard(
     precio: Double,
     stock: Int,
     imagenUrl: String?,
+    isSmall: Boolean = false,
     onClick: () -> Unit
 ) {
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .height(150.dp)
+            .height(if (isSmall) 110.dp else 150.dp)
             .clickable { onClick() },
         elevation = CardDefaults.elevatedCardElevation(4.dp)
     ) {
@@ -582,7 +645,7 @@ private fun ProductoCard(
                 contentDescription = nombre,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .height(75.dp)
+                    .height(if (isSmall) 45.dp else 75.dp)
                     .fillMaxWidth()
                     .clip(MaterialTheme.shapes.medium),
                 loading = {
@@ -629,7 +692,8 @@ private fun BarraCobro(
     onEfectivo: (Double?) -> Unit,
     onAbrirDescuento: () -> Unit,
     onCobrar: () -> Unit,
-    cobrarHabilitado: Boolean
+    cobrarHabilitado: Boolean,
+    isSmall: Boolean = false
 ) {
     var efectivoText by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
     LaunchedEffect(efectivoEntregado) {
@@ -644,8 +708,8 @@ private fun BarraCobro(
             Modifier
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min)
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(if (isSmall) 8.dp else 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (isSmall) 10.dp else 20.dp)
         ) {
 
             // ── ZONA IZQUIERDA: descuento + efectivo entregado ──
@@ -763,7 +827,7 @@ private fun BarraCobro(
                         )
                         Text(
                             money(total),
-                            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.ExtraBold),
+                            style = (if (isSmall) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displaySmall).copy(fontWeight = FontWeight.ExtraBold),
                             color = teal
                         )
                     }
@@ -782,7 +846,7 @@ private fun BarraCobro(
                         val selected = metodoPago == nombre
                         ElevatedButton(
                             onClick = { onMetodo(nombre) },
-                            modifier = Modifier.weight(1f).height(60.dp),
+                            modifier = Modifier.weight(1f).height(if (isSmall) 44.dp else 60.dp),
                             colors = if (selected)
                                 ButtonDefaults.elevatedButtonColors(containerColor = teal, contentColor = onTeal)
                             else
@@ -800,7 +864,7 @@ private fun BarraCobro(
                 Button(
                     onClick = onCobrar,
                     enabled = cobrarHabilitado,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    modifier = Modifier.fillMaxWidth().height(if (isSmall) 44.dp else 56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = teal, contentColor = onTeal)
                 ) {
                     Icon(Icons.Default.Check, null)
@@ -865,6 +929,178 @@ private fun DescuentoDialog(
             OutlinedButton(onClick = onCerrar) { Text("Cancelar") }
         }
     )
+}
+
+/* ---------- Diálogo selector de cliente ---------- */
+
+@Composable
+private fun ClienteSelectorDialog(
+    clientes: List<ClienteResponse>,
+    seleccionado: ClienteResponse?,
+    onDismiss: () -> Unit,
+    onSeleccionar: (ClienteResponse?) -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+
+    val listaFiltrada = remember(query, clientes) {
+        if (query.isBlank()) clientes
+        else clientes.filter {
+            it.nombre.contains(query, ignoreCase = true) ||
+            it.telefono?.contains(query, ignoreCase = true) == true
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Person, null, Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Seleccionar cliente")
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Buscador
+                OutlinedTextField(
+                    value         = query,
+                    onValueChange = { query = it },
+                    leadingIcon   = { Icon(Icons.Default.Search, null) },
+                    trailingIcon  = {
+                        if (query.isNotBlank()) {
+                            IconButton(onClick = { query = "" }) { Icon(Icons.Default.Clear, null) }
+                        }
+                    },
+                    placeholder   = { Text("Buscar cliente…") },
+                    singleLine    = true,
+                    modifier      = Modifier.fillMaxWidth()
+                )
+
+                // Opción "Cliente básico" siempre visible
+                ClienteOpcion(
+                    nombre      = "Cliente básico",
+                    telefono    = null,
+                    seleccionado = seleccionado == null,
+                    onClick     = { onSeleccionar(null) }
+                )
+
+                HorizontalDivider()
+
+                // Lista de clientes
+                if (listaFiltrada.isEmpty()) {
+                    Box(
+                        Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Sin resultados",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.heightIn(max = 300.dp)
+                    ) {
+                        items(listaFiltrada, key = { it.id }) { c ->
+                            ClienteOpcion(
+                                nombre       = c.nombre,
+                                telefono     = c.telefono,
+                                seleccionado = seleccionado?.id == c.id,
+                                onClick      = { onSeleccionar(c) }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+@Composable
+private fun ClienteOpcion(
+    nombre: String,
+    telefono: String?,
+    seleccionado: Boolean,
+    onClick: () -> Unit
+) {
+    val bg = if (seleccionado)
+        MaterialTheme.colorScheme.primaryContainer
+    else
+        MaterialTheme.colorScheme.surface
+
+    Surface(
+        onClick  = onClick,
+        shape    = MaterialTheme.shapes.medium,
+        color    = bg,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier          = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Avatar
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(
+                        if (seleccionado)
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (nombre == "Cliente básico") {
+                    Icon(
+                        Icons.Default.PersonOutline,
+                        null,
+                        modifier = Modifier.size(18.dp),
+                        tint     = if (seleccionado) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        nombre.firstOrNull()?.uppercase() ?: "?",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (seleccionado) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(10.dp))
+
+            Column(Modifier.weight(1f)) {
+                Text(
+                    nombre,
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (seleccionado) FontWeight.SemiBold else FontWeight.Normal
+                )
+                if (telefono != null) {
+                    Text(
+                        telefono,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (seleccionado) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = null,
+                    tint     = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
 }
 
 /* ---------- Helpers de dinero ---------- */

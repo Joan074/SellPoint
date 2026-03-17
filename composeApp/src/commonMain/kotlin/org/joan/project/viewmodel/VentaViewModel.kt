@@ -5,18 +5,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.LocalTime
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import org.joan.project.db.entidades.EmpleadoSimpleResponse
-import org.joan.project.db.entidades.VentaRequest
-import org.joan.project.db.entidades.VentaResponse
+import kotlinx.datetime.*
+import org.joan.project.db.entidades.*
 import org.joan.project.service.VentaService
-
-private const val DEMO_TOKEN = "token-demo-offline"
 
 class VentaViewModel(
     private val ventaService: VentaService
@@ -33,7 +24,13 @@ class VentaViewModel(
         onError: (String) -> Unit = {},
         onSuccess: () -> Unit = {}
     ) {
-        if (token == DEMO_TOKEN) { _ventas.value = emptyList(); onSuccess(); return }
+        if (token == DEMO_TOKEN) {
+            val desdeStr = LocalDateTime(desde, LocalTime(0, 0, 0)).toString()
+            val hastaStr = LocalDateTime(hasta, LocalTime(23, 59, 59)).toString()
+            _ventas.value = VENTAS_DEMO.filter { it.fecha >= desdeStr && it.fecha <= hastaStr }
+            onSuccess()
+            return
+        }
         scope.launch {
             try {
                 val desdeStr = LocalDateTime(desde, LocalTime(0, 0, 0)).toString()
@@ -54,16 +51,35 @@ class VentaViewModel(
         onError: (String) -> Unit
     ) {
         if (token == DEMO_TOKEN) {
+            val items = ventaRequest.items.mapNotNull { req ->
+                val prod = PRODUCTOS_DEMO.find { it.id == req.productoId } ?: return@mapNotNull null
+                val precio = req.precioEspecial ?: prod.precio
+                ItemVentaResponse(
+                    productoId     = prod.id,
+                    codigoBarras   = prod.codigoBarras ?: "",
+                    nombre         = prod.nombre,
+                    cantidad       = req.cantidad,
+                    precioUnitario = precio,
+                    descuento      = 0.0,
+                    subtotal       = precio * req.cantidad
+                )
+            }
+            val subtotal = items.sumOf { it.subtotal }
+            val iva      = subtotal * 0.21
+            val now      = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+            val dateTag  = now.date.toString().replace("-", "")
             val demo = VentaResponse(
-                id = 0,
-                cliente = null,
-                empleado = EmpleadoSimpleResponse(id = 0, nombre = "Demo"),
-                fecha = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toString(),
-                subtotal = 0.0, iva = 0.0, total = 0.0,
-                estado = "COMPLETADA",
-                metodoPago = ventaRequest.metodoPago,
-                items = emptyList(),
-                numeroTicket = "DEMO-${System.currentTimeMillis()}"
+                id           = (System.currentTimeMillis() % 100000).toInt(),
+                cliente      = null,
+                empleado     = EmpleadoSimpleResponse(0, "Demo"),
+                fecha        = now.toString(),
+                subtotal     = subtotal,
+                iva          = iva,
+                total        = subtotal + iva,
+                estado       = "COMPLETADA",
+                metodoPago   = ventaRequest.metodoPago,
+                items        = items,
+                numeroTicket = "T-$dateTag-${(System.currentTimeMillis() % 9000 + 1000).toInt()}"
             )
             onSuccess(demo)
             return

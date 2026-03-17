@@ -23,11 +23,15 @@ class ProveedorViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    // Notas en memoria por proveedor
     private val _notas = MutableStateFlow<Map<Int, List<String>>>(emptyMap())
     val notas: StateFlow<Map<Int, List<String>>> = _notas
 
     fun cargarProveedores(token: String) {
+        if (token == DEMO_TOKEN) {
+            _proveedores.value = PROVEEDORES_DEMO.sortedBy { it.nombre.lowercase() }
+            _cargando.value = false
+            return
+        }
         scope.launch {
             _cargando.value = true
             _error.value = null
@@ -49,9 +53,7 @@ class ProveedorViewModel(
         return creado
     }
 
-
-
-    fun actualizarNota(token: String, id: Int, nota: String?, onError: (String)->Unit = {}, onSuccess: ()->Unit = {}) {
+    fun actualizarNota(token: String, id: Int, nota: String?, onError: (String) -> Unit = {}, onSuccess: () -> Unit = {}) {
         scope.launch {
             try {
                 val actualizado = proveedorService.actualizarNota(token, id, nota)
@@ -61,7 +63,7 @@ class ProveedorViewModel(
         }
     }
 
-    fun borrarNota(token: String, id: Int, onError: (String)->Unit = {}, onSuccess: ()->Unit = {}) {
+    fun borrarNota(token: String, id: Int, onError: (String) -> Unit = {}, onSuccess: () -> Unit = {}) {
         scope.launch {
             try {
                 val actualizado = proveedorService.borrarNota(token, id)
@@ -70,7 +72,6 @@ class ProveedorViewModel(
             } catch (e: Exception) { onError(e.message ?: "Error al borrar nota") }
         }
     }
-
 
     fun actualizarProveedor(token: String, id: Int, request: ProveedorRequest) {
         scope.launch {
@@ -83,13 +84,11 @@ class ProveedorViewModel(
         }
     }
 
-
     fun eliminarProveedor(token: String, id: Int) {
         scope.launch {
             try {
                 proveedorService.eliminarProveedor(token, id)
                 _proveedores.value = _proveedores.value.filterNot { it.id == id }
-                // opcional: limpiar sus notas
                 _notas.value = _notas.value.toMutableMap().apply { remove(id) }
             } catch (e: Exception) {
                 _error.value = e.message

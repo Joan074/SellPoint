@@ -128,11 +128,12 @@ fun PantallaProductos(
         },
         snackbarHost = { SnackbarHost(hostState = snackbar) }
     ) { padding ->
+        BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
+        val isSmall = maxWidth < 1024.dp
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp, vertical = 12.dp)
+                .padding(horizontal = if (isSmall) 12.dp else 24.dp, vertical = 12.dp)
         ) {
 
             // Resumen inventario
@@ -210,7 +211,7 @@ fun PantallaProductos(
             }
 
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(260.dp),
+                columns = GridCells.Adaptive(if (isSmall) 180.dp else 260.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
                 modifier = Modifier.fillMaxSize()
@@ -232,6 +233,7 @@ fun PantallaProductos(
                 }
             }
         }
+        } // BoxWithConstraints
     }
 
     // Diálogo eliminar
