@@ -326,9 +326,7 @@ fun PantallaCobrar(
                                     cantidad = l.cantidad,
                                     stock = l.producto.stock,
                                     onMas = {
-                                        carrito[idx] = l.copy(
-                                            cantidad = (l.cantidad + 1).coerceAtMost(l.producto.stock)
-                                        )
+                                        carrito[idx] = l.copy(cantidad = l.cantidad + 1)
                                     },
                                     onMenos = {
                                         if (l.cantidad > 1) carrito[idx] = l.copy(cantidad = l.cantidad - 1)
@@ -439,9 +437,8 @@ fun PantallaCobrar(
                             onClick = {
                                 val idx = carrito.indexOfFirst { it.producto.id == p.id }
                                 if (idx >= 0) {
-                                    val l = carrito[idx]
-                                    if (l.cantidad < p.stock) carrito[idx] = l.copy(cantidad = l.cantidad + 1)
-                                } else if (p.stock > 0) {
+                                    carrito[idx] = carrito[idx].copy(cantidad = carrito[idx].cantidad + 1)
+                                } else {
                                     carrito += org.joan.project.db.entidades.LineaVenta(producto = p, cantidad = 1)
                                 }
                             }
@@ -708,30 +705,34 @@ private fun BarraCobro(
             Modifier
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min)
-                .padding(if (isSmall) 8.dp else 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(if (isSmall) 10.dp else 20.dp)
+                .padding(if (isSmall) 6.dp else 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (isSmall) 8.dp else 14.dp)
         ) {
 
             // ── ZONA IZQUIERDA: descuento + efectivo entregado ──
             Column(
                 Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Subtotal
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Subtotal", style = MaterialTheme.typography.bodyMedium,
+                    Text("Subtotal", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(money(subtotal), style = MaterialTheme.typography.bodyMedium)
+                    Text(money(subtotal), style = MaterialTheme.typography.bodySmall)
                 }
                 if (descuentoCalculado > 0.0) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Descuento", style = MaterialTheme.typography.bodyMedium, color = teal)
-                        Text("-${money(descuentoCalculado)}", style = MaterialTheme.typography.bodyMedium, color = teal)
+                        Text("Descuento", style = MaterialTheme.typography.bodySmall, color = teal)
+                        Text("-${money(descuentoCalculado)}", style = MaterialTheme.typography.bodySmall, color = teal)
                     }
                 }
 
                 // Botón descuento
-                FilledTonalButton(onClick = onAbrirDescuento, modifier = Modifier.fillMaxWidth()) {
+                FilledTonalButton(
+                    onClick = onAbrirDescuento,
+                    modifier = Modifier.fillMaxWidth().height(32.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                ) {
                     Icon(Icons.Default.LocalOffer, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     val resumen = when {
@@ -808,35 +809,36 @@ private fun BarraCobro(
             // ── ZONA DERECHA: total + métodos de pago + finalizar ──
             Column(
                 Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // TOTAL prominente en teal
                 Surface(
-                    shape = MaterialTheme.shapes.large,
+                    shape = MaterialTheme.shapes.medium,
                     color = teal.copy(alpha = 0.10f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(
-                        Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Row(
+                        Modifier.padding(horizontal = 12.dp, vertical = 6.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "TOTAL A PAGAR",
-                            style = MaterialTheme.typography.labelLarge,
+                            "TOTAL",
+                            style = MaterialTheme.typography.labelMedium,
                             color = teal
                         )
                         Text(
                             money(total),
-                            style = (if (isSmall) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displaySmall).copy(fontWeight = FontWeight.ExtraBold),
+                            style = (if (isSmall) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall).copy(fontWeight = FontWeight.ExtraBold),
                             color = teal
                         )
                     }
                 }
 
-                // Métodos de pago — botones grandes con icono
+                // Métodos de pago — botones compactos
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     listOf(
                         Triple("EFECTIVO", Icons.Default.Payments,    "Efectivo"),
@@ -846,16 +848,16 @@ private fun BarraCobro(
                         val selected = metodoPago == nombre
                         ElevatedButton(
                             onClick = { onMetodo(nombre) },
-                            modifier = Modifier.weight(1f).height(if (isSmall) 44.dp else 60.dp),
+                            modifier = Modifier.weight(1f).height(if (isSmall) 36.dp else 44.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                             colors = if (selected)
                                 ButtonDefaults.elevatedButtonColors(containerColor = teal, contentColor = onTeal)
                             else
                                 ButtonDefaults.elevatedButtonColors()
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(icono, null, Modifier.size(20.dp))
-                                Text(label, style = MaterialTheme.typography.labelSmall)
-                            }
+                            Icon(icono, null, Modifier.size(14.dp))
+                            Spacer(Modifier.width(3.dp))
+                            Text(label, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
@@ -864,12 +866,12 @@ private fun BarraCobro(
                 Button(
                     onClick = onCobrar,
                     enabled = cobrarHabilitado,
-                    modifier = Modifier.fillMaxWidth().height(if (isSmall) 44.dp else 56.dp),
+                    modifier = Modifier.fillMaxWidth().height(if (isSmall) 36.dp else 44.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = teal, contentColor = onTeal)
                 ) {
-                    Icon(Icons.Default.Check, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Finalizar venta", style = MaterialTheme.typography.titleMedium)
+                    Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Finalizar venta", style = MaterialTheme.typography.labelLarge)
                 }
             }
         }

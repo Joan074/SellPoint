@@ -22,7 +22,7 @@ object DatabaseFactory {
             driverClassName = "org.postgresql.Driver"
             username = dbUser
             password = dbPassword
-            maximumPoolSize = 10
+            maximumPoolSize = 5
             isAutoCommit = false
             transactionIsolation = "TRANSACTION_REPEATABLE_READ"
             poolName = "SellPointPool"

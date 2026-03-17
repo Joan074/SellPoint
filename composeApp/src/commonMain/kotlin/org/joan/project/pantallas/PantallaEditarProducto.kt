@@ -15,20 +15,26 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.joan.project.db.entidades.ProductoResponse
 import org.joan.project.db.entidades.ProductoRequest
+import org.joan.project.service.SupabaseStorageService
+import org.joan.project.ui.ProductoImagen
 import org.joan.project.viewmodel.ProductoViewModel
 import org.koin.compose.koinInject
-import java.awt.FileDialog
-import java.awt.Frame
 import java.io.File
-import java.nio.file.Files
+import java.util.concurrent.CompletableFuture
+import javax.swing.JFileChooser
+import javax.swing.filechooser.FileNameExtensionFilter
 import org.jetbrains.skia.Image as SkiaImage
 
 @Composable
 fun PantallaEditarProducto(
     producto: ProductoResponse,
     viewModel: ProductoViewModel = koinInject(),
+    supabaseStorageService: SupabaseStorageService = koinInject(),
     token: String,
     onVolverClick: () -> Unit,
     onProductoActualizado: () -> Unit
@@ -40,8 +46,9 @@ fun PantallaEditarProducto(
     var categoriaId by remember { mutableStateOf(producto.categoria.id.toString()) }
     var proveedorId by remember { mutableStateOf(producto.proveedor.id.toString()) }
 
-    var imagenPath by remember { mutableStateOf(producto.imagenUrl) }
+    var imagenUrl by remember { mutableStateOf(producto.imagenUrl) }
     var imagenBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var subiendoImagen by remember { mutableStateOf(false) }
 
     var showError by remember { mutableStateOf(false) }
     var errorGlobal by remember { mutableStateOf<String?>(null) }
@@ -54,17 +61,7 @@ fun PantallaEditarProducto(
 
     val scrollState = rememberScrollState()
 
-    // Cargar imagen desde la ruta original
-    LaunchedEffect(producto.imagenUrl) {
-        producto.imagenUrl?.let { path ->
-            val file = File(path)
-            if (file.exists()) {
-                val bytes = Files.readAllBytes(file.toPath())
-                val skiaImage = SkiaImage.makeFromEncoded(bytes)
-                imagenBitmap = skiaImage.toComposeImageBitmap()
-            }
-        }
-    }
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -154,31 +151,74 @@ fun PantallaEditarProducto(
                         singleLine = true
                     )
 
-                    Button(onClick = {
-                        val dialog = FileDialog(null as Frame?, "Seleccionar imagen", FileDialog.LOAD)
-                        dialog.isVisible = true
-                        if (dialog.file != null) {
-                            val selectedFile = File(dialog.directory, dialog.file)
-                            imagenPath = selectedFile.absolutePath
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                val future = CompletableFuture<File?>()
+                                javax.swing.SwingUtilities.invokeLater {
+                                    val chooser = JFileChooser()
+                                    chooser.dialogTitle = "Cambiar imagen del producto"
+                                    chooser.fileFilter = FileNameExtensionFilter(
+                                        "Imágenes (JPG, PNG, WEBP)", "jpg", "jpeg", "png", "webp"
+                                    )
+                                    val result = chooser.showOpenDialog(null)
+                                    future.complete(
+                                        if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
+                                    )
+                                }
+                                val archivo = withContext(Dispatchers.IO) { future.get() }
+                                    ?: return@launch
 
-                            val bytes = Files.readAllBytes(selectedFile.toPath())
-                            val skiaImage = SkiaImage.makeFromEncoded(bytes)
-                            imagenBitmap = skiaImage.toComposeImageBitmap()
+                                // Preview local inmediato
+                                val bytes = withContext(Dispatchers.IO) { archivo.readBytes() }
+                                imagenBitmap = SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
+
+                                // Subir a Supabase Storage
+                                subiendoImagen = true
+                                errorGlobal = null
+                                try {
+                                    imagenUrl = withContext(Dispatchers.IO) {
+                                        supabaseStorageService.subirImagen(archivo)
+                                    }
+                                } catch (e: Exception) {
+                                    errorGlobal = "Error al subir imagen: ${e.message}"
+                                } finally {
+                                    subiendoImagen = false
+                                }
+                            }
+                        },
+                        enabled = !subiendoImagen
+                    ) {
+                        if (subiendoImagen) {
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Subiendo...")
+                        } else {
+                            Text("Cambiar Imagen")
                         }
-                    }) {
-                        Text("Cambiar Imagen")
                     }
 
                     if (imagenBitmap != null) {
                         Image(
                             bitmap = imagenBitmap!!,
                             contentDescription = "Imagen seleccionada",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(160.dp)
+                            modifier = Modifier.fillMaxWidth().height(160.dp)
+                        )
+                        if (imagenUrl != null && imagenUrl != producto.imagenUrl) {
+                            Text(
+                                "✓ Nueva imagen subida correctamente",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    } else if (!imagenUrl.isNullOrBlank()) {
+                        ProductoImagen(
+                            urlOrPath = imagenUrl,
+                            contentDescription = producto.nombre,
+                            modifier = Modifier.fillMaxWidth().height(160.dp)
                         )
                     } else {
-                        Text("Imagen actual o no seleccionada", style = MaterialTheme.typography.bodySmall)
+                        Text("Sin imagen", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -202,7 +242,7 @@ fun PantallaEditarProducto(
                         codigoBarras = if (codigoBarras.isBlank()) null else codigoBarras,
                         categoriaId = categoriaId.toInt(),
                         proveedorId = proveedorId.toInt(),
-                        imagenUrl = imagenPath
+                        imagenUrl = imagenUrl
                     )
                     viewModel.actualizarProducto(producto.id, req, token, {
                         onProductoActualizado()

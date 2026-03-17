@@ -50,6 +50,7 @@ val appModule = module {
 
     single { ProductoService(get()) }
     single { ProductoViewModel(get()) }
+    single { SupabaseStorageService(get()) }
 
     single { VentaService(get()) }
     single { VentaViewModel(get()) }

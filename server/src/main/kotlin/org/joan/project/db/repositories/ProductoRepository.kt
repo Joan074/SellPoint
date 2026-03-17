@@ -43,14 +43,15 @@ class ProductoRepository {
     }
 
     suspend fun update(id: Int, productoRequest: ProductoRequest): Boolean = dbQuery {
-        // Verificamos si ya existe otro producto con el mismo código de barras
-        val otroProductoConMismoCodigo = Productos.select {
-            (Productos.codigoBarras eq productoRequest.codigoBarras) and
-                    (Productos.id neq id)
-        }.count() > 0
-
-        if (otroProductoConMismoCodigo) {
-            throw IllegalArgumentException("Ese código de barras ya está en uso por otro producto.")
+        // Verificar código de barras duplicado solo si se proporciona uno
+        if (!productoRequest.codigoBarras.isNullOrBlank()) {
+            val otroProductoConMismoCodigo = Productos.select {
+                (Productos.codigoBarras eq productoRequest.codigoBarras) and
+                        (Productos.id neq id)
+            }.count() > 0
+            if (otroProductoConMismoCodigo) {
+                throw IllegalArgumentException("Ese código de barras ya está en uso por otro producto.")
+            }
         }
 
         // Actualización del producto
@@ -81,7 +82,10 @@ class ProductoRepository {
     suspend fun restarStock(id: Int, cantidad: Int): Boolean = dbQuery {
         Productos.update({ Productos.id eq id }) {
             with(SqlExpressionBuilder) {
-                it.update(stock, stock - cantidad)
+                it.update(stock, case()
+                    .When(stock greater cantidad, stock - cantidad)
+                    .Else(intLiteral(0))
+                )
             }
         } > 0
     }

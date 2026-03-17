@@ -1,0 +1,6 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="SellPoint" type="CompoundRunConfigurationType">
+    <toRun name="SellPoint Server" type="GradleRunConfiguration" />
+    <toRun name="SellPoint App" type="GradleRunConfiguration" />
+  </configuration>
+</component>

@@ -18,15 +18,18 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.joan.project.db.entidades.*
+import org.joan.project.service.SupabaseStorageService
 import org.joan.project.viewmodel.CategoriaViewModel
 import org.joan.project.viewmodel.ProductoViewModel
 import org.joan.project.viewmodel.ProveedorViewModel
 import org.koin.compose.koinInject
-import java.awt.FileDialog
-import java.awt.Frame
 import java.io.File
-import java.nio.file.Files
+import java.util.concurrent.CompletableFuture
+import javax.swing.JFileChooser
+import javax.swing.filechooser.FileNameExtensionFilter
 import org.jetbrains.skia.Image as SkiaImage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,6 +38,7 @@ fun PantallaCrearProducto(
     productoViewModel: ProductoViewModel = koinInject(),
     categoriaViewModel: CategoriaViewModel = koinInject(),
     proveedorViewModel: ProveedorViewModel = koinInject(),
+    supabaseStorageService: SupabaseStorageService = koinInject(),
     token: String,
     onProductoCreado: () -> Unit,
     onVolverClick: () -> Unit
@@ -45,9 +49,10 @@ fun PantallaCrearProducto(
     var stock by remember { mutableStateOf("") }
     var codigoBarras by remember { mutableStateOf("") }
 
-    // Imagen local
-    var imagenPath by remember { mutableStateOf<String?>(null) }
+    // Imagen
+    var imagenUrl by remember { mutableStateOf<String?>(null) }
     var imagenBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var subiendoImagen by remember { mutableStateOf(false) }
 
     // Catálogos (via VM)
     val categorias by categoriaViewModel.categorias.collectAsState()
@@ -202,19 +207,54 @@ fun PantallaCrearProducto(
                         Text(provError!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
 
-                    // --------- Imagen local ----------
-                    Button(onClick = {
-                        val dialog = FileDialog(null as Frame?, "Seleccionar imagen", FileDialog.LOAD)
-                        dialog.isVisible = true
-                        if (dialog.file != null) {
-                            val selectedFile = File(dialog.directory, dialog.file)
-                            imagenPath = selectedFile.absolutePath
+                    // --------- Imagen ----------
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                val future = CompletableFuture<File?>()
+                                javax.swing.SwingUtilities.invokeLater {
+                                    val chooser = JFileChooser()
+                                    chooser.dialogTitle = "Seleccionar imagen del producto"
+                                    chooser.fileFilter = FileNameExtensionFilter(
+                                        "Imágenes (JPG, PNG, WEBP)", "jpg", "jpeg", "png", "webp"
+                                    )
+                                    val result = chooser.showOpenDialog(null)
+                                    future.complete(
+                                        if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
+                                    )
+                                }
+                                val archivo = withContext(Dispatchers.IO) { future.get() }
+                                    ?: return@launch
 
-                            val bytes = Files.readAllBytes(selectedFile.toPath())
-                            val skiaImage = SkiaImage.makeFromEncoded(bytes)
-                            imagenBitmap = skiaImage.toComposeImageBitmap()
+                                // Preview local inmediato
+                                val bytes = withContext(Dispatchers.IO) { archivo.readBytes() }
+                                imagenBitmap = SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
+
+                                // Subir a Supabase Storage
+                                subiendoImagen = true
+                                errorGlobal = null
+                                try {
+                                    imagenUrl = withContext(Dispatchers.IO) {
+                                        supabaseStorageService.subirImagen(archivo)
+                                    }
+                                } catch (e: Exception) {
+                                    errorGlobal = "Error al subir imagen: ${e.message}"
+                                    imagenUrl = null
+                                } finally {
+                                    subiendoImagen = false
+                                }
+                            }
+                        },
+                        enabled = !subiendoImagen
+                    ) {
+                        if (subiendoImagen) {
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Subiendo...")
+                        } else {
+                            Text("Seleccionar imagen")
                         }
-                    }) { Text("Seleccionar imagen") }
+                    }
 
                     if (imagenBitmap != null) {
                         Image(
@@ -224,7 +264,13 @@ fun PantallaCrearProducto(
                                 .fillMaxWidth()
                                 .height(180.dp)
                         )
-                        Text(imagenPath ?: "", style = MaterialTheme.typography.bodySmall)
+                        if (imagenUrl != null) {
+                            Text(
+                                "✓ Imagen subida correctamente",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     } else {
                         Text("No se ha seleccionado ninguna imagen", style = MaterialTheme.typography.bodySmall)
                     }
@@ -253,7 +299,7 @@ fun PantallaCrearProducto(
                     codigoBarras = codigoBarras.ifBlank { null },
                     categoriaId = categoriaSel!!.id,
                     proveedorId = proveedorSel!!.id,
-                    imagenUrl = imagenPath
+                    imagenUrl = imagenUrl
                 )
 
                 creandoProducto = true
