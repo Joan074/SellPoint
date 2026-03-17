@@ -25,20 +25,31 @@ Los sistemas TPV comerciales suelen ser caros, cerrados y difíciles de personal
 
 ## Capturas de pantalla
 
-<!-- TODO: Añadir captura del Dashboard / PantallaInicio -->
-> `docs/screenshots/dashboard.png`
+<!--
+  CÓMO AÑADIR CAPTURAS:
+  1. Haz una captura de cada pantalla de la app (PNG recomendado)
+  2. Guarda los archivos en docs/screenshots/ con los nombres indicados:
+       docs/screenshots/dashboard.png
+       docs/screenshots/cobrar.png
+       docs/screenshots/productos.png
+       docs/screenshots/graficos.png
+       docs/screenshots/ticket_pdf.png
+  3. Sustituye cada bloque de comentario de abajo por una línea así:
+       ![Descripción](docs/screenshots/nombre_archivo.png)
+  4. Haz commit y push — GitHub renderizará las imágenes automáticamente.
+-->
 
-<!-- TODO: Añadir captura de la pantalla de cobro (PantallaCobrar) -->
-> `docs/screenshots/cobrar.png`
+| Dashboard | TPV / Cobrar |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Cobrar](docs/screenshots/cobrar.png) |
 
-<!-- TODO: Añadir captura de la gestión de productos -->
-> `docs/screenshots/productos.png`
+| Gestión de productos | Gráficos de ventas |
+|---|---|
+| ![Productos](docs/screenshots/productos.png) | ![Gráficos](docs/screenshots/graficos.png) |
 
-<!-- TODO: Añadir captura del reporte de ventas y gráficos -->
-> `docs/screenshots/graficos.png`
-
-<!-- TODO: Añadir captura del ticket PDF generado -->
-> `docs/screenshots/ticket_pdf.png`
+| Ticket PDF |
+|---|
+| ![Ticket](docs/screenshots/ticket_pdf.png) |
 
 ---
 
@@ -287,7 +298,7 @@ Este proyecto está publicado bajo la licencia **MIT**.
 ```
 MIT License
 
-Copyright (c) 2025 Joan074
+Copyright (c) 2026 Joan074
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
