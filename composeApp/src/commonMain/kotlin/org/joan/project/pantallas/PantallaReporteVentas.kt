@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,8 +15,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.joan.project.db.entidades.VentaResponse
 import org.joan.project.viewmodel.AuthViewModel
+import org.joan.project.viewmodel.NegocioViewModel
 import org.joan.project.viewmodel.VentaViewModel
 import org.joan.project.visual.generarPdfVentasProfesional
+import org.joan.project.visual.generarTicketPDF
+import org.joan.project.visual.nuevoArchivoTicket
 import org.koin.compose.koinInject
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
@@ -23,6 +27,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.todayIn
+import java.awt.Desktop
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 
@@ -30,6 +35,7 @@ import javax.swing.filechooser.FileNameExtensionFilter
 fun PantallaReporteVentas(
     ventaViewModel: VentaViewModel = koinInject(),
     authViewModel: AuthViewModel = koinInject(),
+    negocioViewModel: NegocioViewModel = koinInject(),
     onVolverClick: () -> Unit,
     onGraficosClick: (ventas: List<VentaResponse>) -> Unit
 ) {
@@ -41,6 +47,7 @@ fun PantallaReporteVentas(
     var fechaFin by remember { mutableStateOf(today) }
 
     val ventas by ventaViewModel.ventas.collectAsState()
+    val negocio by negocioViewModel.datos.collectAsState()
 
     var cargando by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
@@ -196,6 +203,26 @@ fun PantallaReporteVentas(
                                 Text("Empleado: ${venta.empleado.nombre}")
                                 Text("Método de pago: ${venta.metodoPago}")
                                 Text("Total: %.2f €".format(venta.total), fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(6.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.End,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    TextButton(onClick = {
+                                        val archivo = nuevoArchivoTicket()
+                                        generarTicketPDF(venta, archivo, negocio)
+                                        archivo.deleteOnExit()
+                                        Desktop.getDesktop().open(archivo)
+                                    }) {
+                                        Icon(
+                                            Icons.Default.Print,
+                                            contentDescription = "Reimprimir ticket",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Reimprimir")
+                                    }
+                                }
                             }
                         }
                     }

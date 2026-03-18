@@ -36,6 +36,7 @@ import org.joan.project.viewmodel.NegocioViewModel
 import org.joan.project.viewmodel.ProductoViewModel
 import org.joan.project.viewmodel.VentaViewModel
 import org.joan.project.visual.generarTicketPDF
+import org.joan.project.visual.nuevoArchivoTicket
 import coil3.compose.SubcomposeAsyncImage
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
@@ -556,8 +557,9 @@ fun PantallaCobrar(
                     confirmButton = {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(onClick = {
-                                val archivo = File("ticket_${System.currentTimeMillis()}.pdf")
+                                val archivo = nuevoArchivoTicket()
                                 generarTicketPDF(ultimaVenta!!, productos, archivo, currentUser?.nombre ?: "", negocio, ultimoNombreCliente)
+                                archivo.deleteOnExit()
                                 Desktop.getDesktop().open(archivo)
                                 resumenAbierto = false
                             }) { Text("Imprimir ticket") }
