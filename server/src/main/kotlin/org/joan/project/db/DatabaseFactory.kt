@@ -9,12 +9,18 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import org.jetbrains.exposed.sql.transactions.transaction
 
 object DatabaseFactory {
+    @Volatile private var initialized = false
+
     fun init() {
-        val dbUrl = System.getenv("DB_URL")
+        if (initialized) return
+        synchronized(this) {
+            if (initialized) return
+
+        val dbUrl = (System.getenv("DB_URL") ?: System.getProperty("DB_URL"))
             ?: error("Falta la variable de entorno DB_URL")
-        val dbUser = System.getenv("DB_USER")
+        val dbUser = (System.getenv("DB_USER") ?: System.getProperty("DB_USER"))
             ?: error("Falta la variable de entorno DB_USER")
-        val dbPassword = System.getenv("DB_PASSWORD")
+        val dbPassword = (System.getenv("DB_PASSWORD") ?: System.getProperty("DB_PASSWORD"))
             ?: error("Falta la variable de entorno DB_PASSWORD")
 
         val config = HikariConfig().apply {
@@ -38,11 +44,17 @@ object DatabaseFactory {
                 Categorias,
                 Proveedores,
                 Productos,
+                Promociones,
                 Ventas,
                 DetalleVenta,
+                FormasPago,
+                Pagos,
+                ProductoPromocion,
                 Tokens
             )
         }
+        initialized = true
+        } // end synchronized
     }
 
 

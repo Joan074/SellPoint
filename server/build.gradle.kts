@@ -94,4 +94,8 @@ dependencies {
     testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.junit)
     testImplementation(libs.ktor.server.tests)
+    testImplementation(libs.testcontainers.core)
+    testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.ktor.client.content.negotiation)
+    testImplementation(libs.kotlinx.serialization.json)
 }
