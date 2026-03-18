@@ -54,4 +54,11 @@ class CambioEfectivoTest {
         val cambio = calcularCambio(2.0, 1.50)
         assertEquals(0.50, cambio)
     }
+
+    // En CambioEfectivoTest
+    @Test
+    fun `cambio con importe muy pequeño de céntimos`() {
+        val cambio = calcularCambio(0.50, 0.30).round2()
+        assertEquals(0.20, cambio)
+    }
 }

@@ -27,6 +27,7 @@ import androidx.compose.ui.res.useResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -274,13 +275,20 @@ private fun LogoRedondo(logoPath: String? = null) {
 
     Box(
         modifier = Modifier
-            .size(84.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f)),
+            .width(200.dp)
+            .height(80.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = .10f))
+            .padding(8.dp),
         contentAlignment = Alignment.Center
     ) {
         if (logoPainter != null) {
-            Image(painter = logoPainter, contentDescription = "Logo", modifier = Modifier.size(64.dp))
+            Image(
+                painter = logoPainter,
+                contentDescription = "Logo",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit
+            )
         } else {
             Icon(
                 Icons.Default.Store,

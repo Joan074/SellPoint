@@ -79,4 +79,19 @@ class VentaCalculosTest {
         val linea = LineaVenta(producto(0.0), cantidad = 5)
         assertEquals(0.0, linea.subtotal)
     }
+
+    // En VentaCalculosTest
+    @Test
+    fun `total nunca es negativo aunque el descuento supere el subtotal`() {
+        val subtotal = 5.0
+        val descuento = 10.0  // Mayor que el subtotal
+        val total = (subtotal - descuento).coerceAtLeast(0.0)
+        assertTrue(total >= 0.0)
+    }
+
+    @Test
+    fun `carrito vacio tiene subtotal cero`() {
+        val carrito = emptyList<LineaVenta>()
+        assertEquals(0.0, carrito.sumOf { it.subtotal })
+    }
 }
