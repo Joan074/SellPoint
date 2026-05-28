@@ -14,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -22,15 +21,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.joan.project.db.entidades.*
 import org.joan.project.service.SupabaseStorageService
+import org.joan.project.service.seleccionarImagenBytes
+import org.joan.project.service.imagenBitmapDeBytes
 import org.joan.project.viewmodel.CategoriaViewModel
 import org.joan.project.viewmodel.ProductoViewModel
 import org.joan.project.viewmodel.ProveedorViewModel
 import org.koin.compose.koinInject
-import java.io.File
-import java.util.concurrent.CompletableFuture
-import javax.swing.JFileChooser
-import javax.swing.filechooser.FileNameExtensionFilter
-import org.jetbrains.skia.Image as SkiaImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +82,7 @@ fun PantallaCrearProducto(
 
     val isFormValid = remember(nombre, precio, stock, categoriaSel, proveedorSel) {
         nombre.isNotBlank() &&
-                precio.toDoubleOrNull() != null &&
+                precio.replace(',', '.').toDoubleOrNull() != null &&
                 stock.toIntOrNull() != null &&
                 categoriaSel != null &&
                 proveedorSel != null
@@ -141,7 +137,7 @@ fun PantallaCrearProducto(
                             onValueChange = { precio = it },
                             label = { Text("Precio*") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            isError = showError && precio.toDoubleOrNull() == null,
+                            isError = showError && precio.replace(',', '.').toDoubleOrNull() == null,
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
@@ -211,31 +207,14 @@ fun PantallaCrearProducto(
                     Button(
                         onClick = {
                             scope.launch {
-                                val future = CompletableFuture<File?>()
-                                javax.swing.SwingUtilities.invokeLater {
-                                    val chooser = JFileChooser()
-                                    chooser.dialogTitle = "Seleccionar imagen del producto"
-                                    chooser.fileFilter = FileNameExtensionFilter(
-                                        "Imágenes (JPG, PNG, WEBP)", "jpg", "jpeg", "png", "webp"
-                                    )
-                                    val result = chooser.showOpenDialog(null)
-                                    future.complete(
-                                        if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
-                                    )
-                                }
-                                val archivo = withContext(Dispatchers.IO) { future.get() }
-                                    ?: return@launch
+                                val bytes = seleccionarImagenBytes() ?: return@launch
+                                imagenBitmap = imagenBitmapDeBytes(bytes)
 
-                                // Preview local inmediato
-                                val bytes = withContext(Dispatchers.IO) { archivo.readBytes() }
-                                imagenBitmap = SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
-
-                                // Subir a Supabase Storage
                                 subiendoImagen = true
                                 errorGlobal = null
                                 try {
                                     imagenUrl = withContext(Dispatchers.IO) {
-                                        supabaseStorageService.subirImagen(archivo)
+                                        supabaseStorageService.subirImagen(bytes)
                                     }
                                 } catch (e: Exception) {
                                     errorGlobal = "Error al subir imagen: ${e.message}"
@@ -294,7 +273,7 @@ fun PantallaCrearProducto(
 
                 val req = ProductoRequest(
                     nombre = nombre.trim(),
-                    precio = precio.toDoubleOrNull() ?: 0.0,
+                    precio = precio.replace(',', '.').toDoubleOrNull() ?: 0.0,
                     stock = stock.toIntOrNull() ?: 0,
                     codigoBarras = codigoBarras.ifBlank { null },
                     categoriaId = categoriaSel!!.id,

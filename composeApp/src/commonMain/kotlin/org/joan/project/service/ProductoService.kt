@@ -6,14 +6,14 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import org.joan.project.db.entidades.ProductoRequest
 import org.joan.project.db.entidades.ProductoResponse
-import org.joan.project.util.BASE_URL
+import org.joan.project.util.ServerConfig
 
 
-class ProductoService(private val client: HttpClient) {
+class ProductoService(private val client: HttpClient, private val serverConfig: ServerConfig) {
     suspend fun getAllProductos(token: String): List<ProductoResponse> {
-        println("Llamando a $BASE_URL/producto")
+        println("Llamando a ${serverConfig.url}/producto")
         try {
-            val response = client.get("$BASE_URL/producto") {
+            val response = client.get("${serverConfig.url}/producto") {
                 header(HttpHeaders.Authorization, "Bearer $token")
             }
             println("Status: ${response.status}")
@@ -29,7 +29,7 @@ class ProductoService(private val client: HttpClient) {
 
 
     suspend fun crearProducto(token: String, request: ProductoRequest): ProductoResponse {
-        return client.post("${BASE_URL}/producto") {
+        return client.post("${serverConfig.url}/producto") {
             header("Authorization", "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(request)
@@ -37,7 +37,7 @@ class ProductoService(private val client: HttpClient) {
     }
 
     suspend fun actualizarProducto(id: Int, token: String, request: ProductoRequest): ProductoResponse {
-        return client.put("$BASE_URL/producto/$id") {
+        return client.put("${serverConfig.url}/producto/$id") {
             header("Authorization", "Bearer $token")
             contentType(io.ktor.http.ContentType.Application.Json)
             setBody(request)
@@ -45,7 +45,7 @@ class ProductoService(private val client: HttpClient) {
     }
 
     suspend fun eliminarProducto(id: Int, token: String) {
-        client.delete("${BASE_URL}/producto/$id") {
+        client.delete("${serverConfig.url}/producto/$id") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }
     }

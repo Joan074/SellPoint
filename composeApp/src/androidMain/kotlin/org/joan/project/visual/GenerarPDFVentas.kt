@@ -2,11 +2,11 @@ package org.joan.project.visual
 
 import org.joan.project.db.entidades.VentaResponse
 
-expect fun generarPdfVentasProfesional(
+actual fun seleccionarRutaPdf(): String? = null
+
+actual fun generarPdfVentasProfesional(
     rutaArchivo: String,
     ventas: List<VentaResponse>,
     total: Double,
     promedio: Double
-)
-
-expect fun seleccionarRutaPdf(): String?
+) { /* PDF export not supported on Android in this version */ }

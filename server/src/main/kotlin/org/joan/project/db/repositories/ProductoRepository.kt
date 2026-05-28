@@ -128,8 +128,9 @@ class ProductoRepository {
             codigoBarras = row[Productos.codigoBarras],
             imagenUrl = row[Productos.imagenUrl],
             categoria = CategoriaSimpleResponse(
-                row[Categorias.id].value,
-                row[Categorias.nombre]
+                id = row[Categorias.id].value,
+                nombre = row[Categorias.nombre],
+                imagenUrl = row[Categorias.imagenUrl]
             ),
             proveedor = ProveedorSimpleResponse(
                 row[Proveedores.id].value,

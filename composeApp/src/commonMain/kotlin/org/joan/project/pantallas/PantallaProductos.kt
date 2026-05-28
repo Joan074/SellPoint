@@ -129,7 +129,8 @@ fun PantallaProductos(
         snackbarHost = { SnackbarHost(hostState = snackbar) }
     ) { padding ->
         BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
-        val isSmall = maxWidth < 1024.dp
+        val isMobile = maxWidth < 600.dp
+        val isSmall  = maxWidth < 1024.dp
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -211,7 +212,7 @@ fun PantallaProductos(
             }
 
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(if (isSmall) 180.dp else 260.dp),
+                columns = GridCells.Adaptive(if (isMobile) 140.dp else if (isSmall) 180.dp else 260.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
                 modifier = Modifier.fillMaxSize()

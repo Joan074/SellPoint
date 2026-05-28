@@ -22,6 +22,7 @@ object Empleados : IntIdTable() {
 
 object Categorias : IntIdTable() {
     val nombre = varchar("nombre", 255).uniqueIndex()
+    val imagenUrl = varchar("imagen_url", 500).nullable()
 }
 
 object Proveedores : IntIdTable("proveedores") {

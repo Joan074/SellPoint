@@ -96,7 +96,8 @@ data class ProveedorResponse(
 data class CategoriaResponse(
     val id: Int,
     val nombre: String,
-    val cantidadProductos: Long = 0 // Puede calcularse
+    val cantidadProductos: Long = 0,
+    val imagenUrl: String? = null
 )
 
 // Modelos simples para relaciones
@@ -115,7 +116,8 @@ data class EmpleadoSimpleResponse(
 @Serializable
 data class CategoriaSimpleResponse(
     val id: Int,
-    val nombre: String
+    val nombre: String,
+    val imagenUrl: String? = null
 )
 
 @Serializable

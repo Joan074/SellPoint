@@ -17,9 +17,11 @@ import org.joan.project.db.entidades.VentaResponse
 import org.joan.project.viewmodel.AuthViewModel
 import org.joan.project.viewmodel.NegocioViewModel
 import org.joan.project.viewmodel.VentaViewModel
+import org.joan.project.visual.abrirArchivoConViewer
 import org.joan.project.visual.generarPdfVentasProfesional
 import org.joan.project.visual.generarTicketPDF
 import org.joan.project.visual.nuevoArchivoTicket
+import org.joan.project.visual.seleccionarRutaPdf
 import org.koin.compose.koinInject
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
@@ -27,9 +29,6 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.todayIn
-import java.awt.Desktop
-import javax.swing.JFileChooser
-import javax.swing.filechooser.FileNameExtensionFilter
 
 @Composable
 fun PantallaReporteVentas(
@@ -212,7 +211,7 @@ fun PantallaReporteVentas(
                                         val archivo = nuevoArchivoTicket()
                                         generarTicketPDF(venta, archivo, negocio)
                                         archivo.deleteOnExit()
-                                        Desktop.getDesktop().open(archivo)
+                                        abrirArchivoConViewer(archivo)
                                     }) {
                                         Icon(
                                             Icons.Default.Print,
@@ -251,15 +250,3 @@ fun PantallaReporteVentas(
     }
 }
 
-// Función para mostrar diálogo de selección de ruta para guardar PDF
-fun seleccionarRutaPdf(): String? {
-    val chooser = JFileChooser()
-    chooser.dialogTitle = "Guardar reporte como"
-    chooser.fileFilter = FileNameExtensionFilter("Archivos PDF", "pdf")
-    val result = chooser.showSaveDialog(null)
-    return if (result == JFileChooser.APPROVE_OPTION) {
-        var path = chooser.selectedFile.absolutePath
-        if (!path.endsWith(".pdf", ignoreCase = true)) path += ".pdf"
-        path
-    } else null
-}

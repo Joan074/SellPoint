@@ -6,26 +6,26 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import org.joan.project.db.entidades.EmpleadoLoginRequest
 import org.joan.project.db.entidades.TokenResponse
-import org.joan.project.util.BASE_URL
+import org.joan.project.util.ServerConfig
 
 // AuthService.kt en commonMain
-class AuthService(private val client: HttpClient) {
+class AuthService(private val client: HttpClient, private val serverConfig: ServerConfig) {
     suspend fun login(usuario: String, contrasena: String): TokenResponse {
-        return client.post("${BASE_URL}/auth/login") {
+        return client.post("${serverConfig.url}/auth/login") {
             contentType(ContentType.Application.Json)
             setBody(EmpleadoLoginRequest(usuario, contrasena))
         }.body()
     }
 
     suspend fun logout(token: String) {
-        client.post("${BASE_URL}/auth/logout") {
+        client.post("${serverConfig.url}/auth/logout") {
             header("Authorization", "Bearer $token")
         }
     }
 
     suspend fun validateToken(token: String): Boolean {
         return try {
-            client.get("${BASE_URL}/empleados/yo") {
+            client.get("${serverConfig.url}/empleados/yo") {
                 header("Authorization", "Bearer $token")
             }.status.isSuccess()
         } catch (e: Exception) {

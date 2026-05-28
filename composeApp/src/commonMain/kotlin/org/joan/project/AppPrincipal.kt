@@ -33,10 +33,18 @@ fun AppPrincipal(
 
     var pantalla by remember { mutableStateOf<Pantalla>(Pantalla.Inicio) }
 
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val isMobile = maxWidth < 600.dp
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("SellPoint TPV") },
+                title = {
+                    Text(
+                        "SellPoint TPV",
+                        style = if (isMobile) MaterialTheme.typography.titleSmall
+                                else MaterialTheme.typography.titleLarge
+                    )
+                },
                 actions = {
                     Text(currentUser.nombre, modifier = Modifier.padding(end = 16.dp))
                     IconButton(onClick = onLogout) {
@@ -131,4 +139,5 @@ fun AppPrincipal(
             }
         }
     }
+    } // BoxWithConstraints
 }

@@ -8,13 +8,14 @@ import io.ktor.http.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.joan.project.util.ServerConfig
 
-class EmpleadoRepository(private val client: HttpClient) {
+class EmpleadoRepository(private val client: HttpClient, private val serverConfig: ServerConfig) {
 
     var token: String? = null
 
     suspend fun login(usuario: String, contrasena: String): Boolean {
-        val response: HttpResponse = client.post("http://localhost:8080/auth/login") {
+        val response: HttpResponse = client.post("${serverConfig.url}/auth/login") {
             contentType(ContentType.Application.Json)
             setBody(mapOf("username" to usuario, "password" to contrasena))
         }

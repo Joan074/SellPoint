@@ -7,12 +7,12 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import org.joan.project.db.entidades.VentaRequest
 import org.joan.project.db.entidades.VentaResponse
-import org.joan.project.util.BASE_URL
+import org.joan.project.util.ServerConfig
 
-class VentaService(private val client: HttpClient) {
+class VentaService(private val client: HttpClient, private val serverConfig: ServerConfig) {
 
     suspend fun getVentasEntreFechas(token: String, desde: String, hasta: String): List<VentaResponse> {
-        val response: HttpResponse = client.get("$BASE_URL/ventas") {
+        val response: HttpResponse = client.get("${serverConfig.url}/ventas") {
             header(HttpHeaders.Authorization, "Bearer $token")
             parameter("desde", desde)
             parameter("hasta", hasta)
@@ -26,7 +26,7 @@ class VentaService(private val client: HttpClient) {
     }
 
     suspend fun crearVenta(token: String, request: VentaRequest): VentaResponse {
-        val response: HttpResponse = client.post("${BASE_URL}/ventas") {
+        val response: HttpResponse = client.post("${serverConfig.url}/ventas") {
             header(HttpHeaders.Authorization, "Bearer $token")
             contentType(ContentType.Application.Json)
             setBody(request)
@@ -40,7 +40,7 @@ class VentaService(private val client: HttpClient) {
     }
 
     suspend fun anularVenta(token: String, ventaId: Int): VentaResponse {
-        val response: HttpResponse = client.put("${BASE_URL}/ventas/$ventaId/anular") {
+        val response: HttpResponse = client.put("${serverConfig.url}/ventas/$ventaId/anular") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }
 

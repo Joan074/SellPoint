@@ -9,6 +9,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import org.joan.project.service.*
+import org.joan.project.util.ServerConfig
 import org.joan.project.viewmodel.*
 import org.joan.project.viewmodel.NegocioViewModel
 import org.koin.dsl.module
@@ -44,21 +45,24 @@ val appModule = module {
         }
     }
 
+    // Configuración del servidor (URL dinámica)
+    single { ServerConfig(get()) }
+
     // Servicios y ViewModels
-    single { AuthService(get()) }
+    single { AuthService(get(), get()) }
     single { AuthViewModel(get(), get()) }  // get() = AuthService, get() = Settings
 
-    single { ProductoService(get()) }
+    single { ProductoService(get(), get()) }
     single { ProductoViewModel(get()) }
     single { SupabaseStorageService(get()) }
 
-    single { VentaService(get()) }
+    single { VentaService(get(), get()) }
     single { VentaViewModel(get()) }
 
-    single { ProveedorService(get()) }
+    single { ProveedorService(get(), get()) }
     single { ProveedorViewModel(get()) }
 
-    single { CategoriaService(get()) }
+    single { CategoriaService(get(), get()) }
     single { CategoriaViewModel(get()) }
 
     single { NegocioViewModel(get()) }

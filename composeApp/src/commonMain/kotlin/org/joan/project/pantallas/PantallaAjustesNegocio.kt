@@ -17,15 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import org.joan.project.service.cargarImagenLocalBitmap
+import org.joan.project.service.seleccionarRutaImagenLogo
 import org.joan.project.viewmodel.DatosNegocio
 import org.joan.project.viewmodel.NegocioViewModel
 import org.koin.compose.koinInject
-import java.io.File
-import javax.swing.JFileChooser
-import javax.swing.filechooser.FileNameExtensionFilter
 
 @Composable
 fun PantallaAjustesNegocio(
@@ -44,7 +42,7 @@ fun PantallaAjustesNegocio(
     val logoPainter = remember(logoPath) {
         logoPath?.let { path ->
             runCatching {
-                BitmapPainter(File(path).inputStream().buffered().use { loadImageBitmap(it) })
+                cargarImagenLocalBitmap(path)?.let { BitmapPainter(it) }
             }.getOrNull()
         }
     }
@@ -121,13 +119,9 @@ fun PantallaAjustesNegocio(
 
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 FilledTonalButton(onClick = {
-                                    val chooser = JFileChooser()
-                                    chooser.dialogTitle = "Seleccionar logo"
-                                    chooser.fileFilter = FileNameExtensionFilter(
-                                        "Imágenes (PNG, JPG)", "png", "jpg", "jpeg"
-                                    )
-                                    if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-                                        logoPath = chooser.selectedFile.absolutePath
+                                    val path = seleccionarRutaImagenLogo()
+                                    if (path != null) {
+                                        logoPath = path
                                         guardado = false
                                     }
                                 }) {

@@ -67,7 +67,8 @@ data class ItemVentaRequest(
 // CategoriaRequest.kt (Nuevo)
 @Serializable
 data class CategoriaRequest(
-    val nombre: String
+    val nombre: String,
+    val imagenUrl: String? = null
 )
 
 // ProveedorRequest.kt (Nuevo)

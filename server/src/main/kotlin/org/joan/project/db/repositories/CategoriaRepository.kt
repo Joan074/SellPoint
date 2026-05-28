@@ -13,6 +13,7 @@ class CategoriaRepository {
             CategoriaResponse(
                 id = row[Categorias.id].value,
                 nombre = row[Categorias.nombre],
+                imagenUrl = row[Categorias.imagenUrl],
                 cantidadProductos = Productos.select { Productos.categoriaId eq row[Categorias.id] }.count()
             )
         }
@@ -24,34 +25,34 @@ class CategoriaRepository {
                 CategoriaResponse(
                     id = row[Categorias.id].value,
                     nombre = row[Categorias.nombre],
+                    imagenUrl = row[Categorias.imagenUrl],
                     cantidadProductos = Productos.select { Productos.categoriaId eq row[Categorias.id] }.count()
                 )
             }.singleOrNull()
     }
 
-    suspend fun crearCategoria(nombre: String): CategoriaResponse = dbQuery {
+    suspend fun crearCategoria(nombre: String, imagenUrl: String?): CategoriaResponse = dbQuery {
         val insert = Categorias.insert {
             it[Categorias.nombre] = nombre
+            it[Categorias.imagenUrl] = imagenUrl
         }
         CategoriaResponse(
             id = insert[Categorias.id].value,
-            nombre = insert[Categorias.nombre]
+            nombre = insert[Categorias.nombre],
+            imagenUrl = insert[Categorias.imagenUrl]
         )
     }
 
-    suspend fun actualizarCategoria(id: Int, nuevoNombre: String): Boolean = dbQuery {
+    suspend fun actualizarCategoria(id: Int, nuevoNombre: String, imagenUrl: String?): Boolean = dbQuery {
         Categorias.update({ Categorias.id eq id }) {
             it[nombre] = nuevoNombre
+            it[Categorias.imagenUrl] = imagenUrl
         } > 0
     }
-
 
     suspend fun eliminarCategoria(id: Int): Boolean = dbQuery {
         val productosConCategoria = Productos.select { Productos.categoriaId eq id }.count()
         if (productosConCategoria > 0) return@dbQuery false
-
         Categorias.deleteWhere { Categorias.id eq id } > 0
     }
-
-
 }

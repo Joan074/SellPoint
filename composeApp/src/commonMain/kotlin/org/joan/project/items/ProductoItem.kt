@@ -10,9 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.unit.dp
 import org.joan.project.db.entidades.ProductoResponse
-import java.io.File
-import javax.imageio.ImageIO
-import androidx.compose.ui.graphics.toComposeImageBitmap
+import org.joan.project.service.cargarImagenLocalBitmap
 
 @Composable
 fun ProductoItem(
@@ -34,14 +32,7 @@ fun ProductoItem(
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            val imageBitmap = try {
-                producto.imagenUrl?.let { path ->
-                    val file = File(path)
-                    if (file.exists()) ImageIO.read(file)?.toComposeImageBitmap() else null
-                }
-            } catch (_: Exception) {
-                null
-            }
+            val imageBitmap = producto.imagenUrl?.let { cargarImagenLocalBitmap(it) }
 
             if (imageBitmap != null) {
                 Image(

@@ -5,6 +5,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
@@ -35,16 +37,17 @@ import org.joan.project.viewmodel.ClienteViewModel
 import org.joan.project.viewmodel.NegocioViewModel
 import org.joan.project.viewmodel.ProductoViewModel
 import org.joan.project.viewmodel.VentaViewModel
+import org.joan.project.visual.abrirArchivoConViewer
 import org.joan.project.visual.generarTicketPDF
 import org.joan.project.visual.nuevoArchivoTicket
 import coil3.compose.SubcomposeAsyncImage
+import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
+import org.joan.project.db.entidades.VentaResponse
 import org.joan.project.scanner.platformSupportsCameraScanner
 import org.koin.compose.koinInject
-import java.awt.Desktop
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,6 +92,9 @@ fun PantallaCobrar(
     var ultimaVenta by remember { mutableStateOf<VentaRequest?>(null) }
     var ultimoNombreCliente by remember { mutableStateOf<String?>(null) }
     var abrirDialogoDescuento by remember { mutableStateOf(false) }
+    var ultimaVentaCompletada by remember { mutableStateOf<VentaResponse?>(null) }
+    var mostrarBotonReabrir by remember { mutableStateOf(false) }
+    var idsReabiertos by remember { mutableStateOf(emptySet<Int>()) }
 
     // carga inicial
     LaunchedEffect(Unit) {
@@ -100,13 +106,24 @@ fun PantallaCobrar(
         }
     }
 
+    LaunchedEffect(ultimaVentaCompletada) {
+        if (ultimaVentaCompletada != null) {
+            mostrarBotonReabrir = true
+            delay(5 * 60 * 1000L)
+            mostrarBotonReabrir = false
+        }
+    }
+
     // --- Derivados ---
     val categorias = remember(productos) { productos.map { it.categoria.nombre }.distinct().sorted() }
-
 
     val catCounts = remember(productos) {
         productos.groupBy { it.categoria.nombre }
             .mapValues { it.value.size }
+    }
+
+    val catImages = remember(productos) {
+        productos.associate { it.categoria.nombre to it.categoria.imagenUrl }
     }
 
     val productosFiltrados = remember(productos, categoria, query) {
@@ -130,7 +147,8 @@ fun PantallaCobrar(
 
     // --- UI ---
     BoxWithConstraints(Modifier.fillMaxSize()) {
-    val isSmall = maxWidth < 1024.dp
+    val isSmall = maxWidth < 600.dp
+    var tabIndex by remember { mutableStateOf(0) }  // 0=Carrito, 1=Productos
     Scaffold(
         topBar = {
             TopAppBar(
@@ -177,7 +195,9 @@ fun PantallaCobrar(
                     )
                     ventaViewModel.crearVenta(
                         tk, req,
-                        onSuccess = {
+                        onSuccess = { ventaResponse ->
+                            ultimaVentaCompletada = ventaResponse
+                            idsReabiertos = emptySet()
                             token?.let { t ->
                                 val hoy = Clock.System.todayIn(TimeZone.currentSystemDefault())
                                 ventaViewModel.cargarVentasEntreFechas(t, hoy, hoy)
@@ -208,16 +228,33 @@ fun PantallaCobrar(
         },
         snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
-        Row(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // --------- COLUMNA IZQ: CARRITO (45%, altura completa) ---------
-            Column(
-                modifier = Modifier.weight(0.45f).fillMaxHeight()
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            if (isSmall) {
+                TabRow(selectedTabIndex = tabIndex) {
+                    Tab(
+                        selected = tabIndex == 0,
+                        onClick = { tabIndex = 0 },
+                        text = { Text("Carrito") },
+                        icon = { Icon(Icons.Default.ShoppingCart, contentDescription = null) }
+                    )
+                    Tab(
+                        selected = tabIndex == 1,
+                        onClick = { tabIndex = 1 },
+                        text = { Text("Productos") },
+                        icon = { Icon(Icons.Default.GridView, contentDescription = null) }
+                    )
+                }
+            }
+            Row(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+            // --------- COLUMNA IZQ: CARRITO ---------
+            if (!isSmall || tabIndex == 0) Column(
+                modifier = if (isSmall) Modifier.fillMaxSize() else Modifier.weight(0.45f).fillMaxHeight()
             ) {
                 // ---- Franja de pestañas de tickets ----
                 val tealColor = MaterialTheme.colorScheme.tertiary
@@ -311,6 +348,36 @@ fun PantallaCobrar(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                     textAlign = TextAlign.Center
                                 )
+                                if (mostrarBotonReabrir && ultimaVentaCompletada != null) {
+                                    val venta = ultimaVentaCompletada!!
+                                    OutlinedButton(
+                                        onClick = {
+                                            val tk = token ?: return@OutlinedButton
+                                            val itemsARestaurar = venta.items
+                                            mostrarBotonReabrir = false
+                                            ultimaVentaCompletada = null
+                                            ventaViewModel.anularVenta(
+                                                tk, venta.id,
+                                                onSuccess = {},
+                                                onError = { error = it }
+                                            )
+                                            itemsARestaurar.forEach { item ->
+                                                val prod = productos.find { it.id == item.productoId } ?: return@forEach
+                                                val idx = carrito.indexOfFirst { it.producto.id == prod.id }
+                                                if (idx >= 0) {
+                                                    carrito[idx] = carrito[idx].copy(cantidad = carrito[idx].cantidad + item.cantidad)
+                                                } else {
+                                                    carrito += LineaVenta(producto = prod, cantidad = item.cantidad)
+                                                }
+                                            }
+                                            idsReabiertos = itemsARestaurar.map { it.productoId }.toSet()
+                                        }
+                                    ) {
+                                        Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Reabrir último ticket")
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -326,6 +393,7 @@ fun PantallaCobrar(
                                     precio = l.producto.precio,
                                     cantidad = l.cantidad,
                                     stock = l.producto.stock,
+                                    esReabierto = l.producto.id in idsReabiertos,
                                     onMas = {
                                         carrito[idx] = l.copy(cantidad = l.cantidad + 1)
                                     },
@@ -341,8 +409,10 @@ fun PantallaCobrar(
                 }
             }
 
-            // --------- COLUMNA DCHA: PRODUCTOS (55%, altura completa) ---------
-            Column(Modifier.weight(0.55f).fillMaxHeight()) {
+            // --------- COLUMNA DCHA: PRODUCTOS ---------
+            if (!isSmall || tabIndex == 1) Column(
+                modifier = if (isSmall) Modifier.fillMaxSize() else Modifier.weight(0.55f).fillMaxHeight()
+            ) {
                 // --- BUSCADOR (fijo arriba) ---
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
@@ -447,43 +517,70 @@ fun PantallaCobrar(
                     }
                 }
 
-                // --- CHIPS DE CATEGORÍA fijos en la parte inferior ---
+                // --- BOTONES DE CATEGORÍA fijos en la parte inferior ---
                 Spacer(Modifier.height(8.dp))
                 Surface(
                     tonalElevation = 2.dp,
                     shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        item {
-                            FilterChip(
-                                selected = categoria == null,
-                                onClick = { categoria = null },
-                                label = {
-                                    Text(
-                                        "Todas (${productos.size})",
-                                        style = if (isSmall) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyLarge
-                                    )
-                                },
-                                modifier = Modifier.height(if (isSmall) 36.dp else 48.dp)
-                            )
+                    val esAndroid = remember { platformSupportsCameraScanner() }
+                    if (esAndroid) {
+                        // Android: scroll horizontal táctil
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            item {
+                                CategoriaBoton(
+                                    nombre = "Todas",
+                                    count = productos.size,
+                                    imagenUrl = null,
+                                    selected = categoria == null,
+                                    isSmall = isSmall,
+                                    onClick = { categoria = null }
+                                )
+                            }
+                            items(categorias, key = { it }) { cat ->
+                                CategoriaBoton(
+                                    nombre = cat,
+                                    count = catCounts[cat] ?: 0,
+                                    imagenUrl = catImages[cat],
+                                    selected = categoria == cat,
+                                    isSmall = isSmall,
+                                    onClick = { categoria = cat }
+                                )
+                            }
                         }
-                        items(categorias, key = { it }) { cat ->
-                            FilterChip(
-                                selected = categoria == cat,
-                                onClick = { categoria = cat },
-                                label = {
-                                    Text(
-                                        "$cat (${catCounts[cat] ?: 0})",
-                                        style = if (isSmall) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyLarge
-                                    )
-                                },
-                                modifier = Modifier.height(if (isSmall) 36.dp else 48.dp)
+                    } else {
+                        // Desktop: wrap en múltiples filas
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            CategoriaBoton(
+                                nombre = "Todas",
+                                count = productos.size,
+                                imagenUrl = null,
+                                selected = categoria == null,
+                                isSmall = isSmall,
+                                onClick = { categoria = null }
                             )
+                            categorias.forEach { cat ->
+                                CategoriaBoton(
+                                    nombre = cat,
+                                    count = catCounts[cat] ?: 0,
+                                    imagenUrl = catImages[cat],
+                                    selected = categoria == cat,
+                                    isSmall = isSmall,
+                                    onClick = { categoria = cat }
+                                )
+                            }
                         }
                     }
                 }
@@ -560,7 +657,7 @@ fun PantallaCobrar(
                                 val archivo = nuevoArchivoTicket()
                                 generarTicketPDF(ultimaVenta!!, productos, archivo, currentUser?.nombre ?: "", negocio, ultimoNombreCliente)
                                 archivo.deleteOnExit()
-                                Desktop.getDesktop().open(archivo)
+                                abrirArchivoConViewer(archivo)
                                 resumenAbierto = false
                             }) { Text("Imprimir ticket") }
                             TextButton(onClick = { resumenAbierto = false }) { Text("Cerrar") }
@@ -571,9 +668,88 @@ fun PantallaCobrar(
         }
     }
     } // BoxWithConstraints
+} // PantallaCobrar end
 }
 
 /* ---------- Componentes ---------- */
+
+@Composable
+private fun CategoriaBoton(
+    nombre: String,
+    count: Int,
+    imagenUrl: String?,
+    selected: Boolean,
+    isSmall: Boolean,
+    onClick: () -> Unit
+) {
+    val cardH = if (isSmall) 64.dp else 80.dp
+    val imgH  = if (isSmall) 32.dp else 44.dp
+    val cardW = if (isSmall) 80.dp else 100.dp
+    val teal  = MaterialTheme.colorScheme.tertiary
+
+    Card(
+        modifier = Modifier.width(cardW).height(cardH).clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) teal.copy(alpha = 0.18f)
+                             else MaterialTheme.colorScheme.surface
+        ),
+        border = if (selected)
+            androidx.compose.foundation.BorderStroke(2.dp, teal)
+        else null,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            if (imagenUrl != null) {
+                SubcomposeAsyncImage(
+                    model = imagenUrl,
+                    contentDescription = nombre,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .height(imgH)
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.small),
+                    loading = {
+                        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
+                    },
+                    error = {
+                        Box(
+                            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) { Icon(Icons.Default.Category, null, modifier = Modifier.size(20.dp)) }
+                    }
+                )
+                Spacer(Modifier.height(2.dp))
+            } else {
+                Icon(
+                    Icons.Default.Category,
+                    contentDescription = null,
+                    modifier = Modifier.size(if (isSmall) 22.dp else 28.dp),
+                    tint = if (selected) teal else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(2.dp))
+            }
+            Text(
+                nombre,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                color = if (selected) teal else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                "($count)",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (selected) teal.copy(alpha = 0.8f)
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+    }
+}
 
 @Composable
 private fun LineaCarrito(
@@ -581,6 +757,7 @@ private fun LineaCarrito(
     precio: Double,
     cantidad: Int,
     stock: Int,
+    esReabierto: Boolean = false,
     onMas: () -> Unit,
     onMenos: () -> Unit,
     onEliminar: () -> Unit
@@ -593,7 +770,20 @@ private fun LineaCarrito(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text(nombre, fontWeight = FontWeight.SemiBold)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (esReabierto) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = "Del ticket anterior",
+                            tint = Color(0xFF2E7D32),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Text(nombre, fontWeight = FontWeight.SemiBold)
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(money(precio))
                     Spacer(Modifier.width(10.dp))
@@ -629,7 +819,7 @@ private fun ProductoCard(
             .fillMaxWidth()
             .height(if (isSmall) 110.dp else 150.dp)
             .clickable { onClick() },
-        elevation = CardDefaults.elevatedCardElevation(4.dp)
+        elevation = CardDefaults.elevatedCardElevation(if (isSmall) 2.dp else 4.dp)
     ) {
         Column(
             Modifier.padding(8.dp),
@@ -638,8 +828,7 @@ private fun ProductoCard(
             SubcomposeAsyncImage(
                 model = when {
                     imagenUrl == null -> null
-                    imagenUrl.startsWith("http") -> imagenUrl
-                    else -> File(imagenUrl)
+                    else -> imagenUrl
                 },
                 contentDescription = nombre,
                 contentScale = ContentScale.Crop,
@@ -707,7 +896,7 @@ private fun BarraCobro(
             Modifier
                 .fillMaxWidth()
                 .height(IntrinsicSize.Min)
-                .padding(if (isSmall) 6.dp else 10.dp),
+                .padding(if (isSmall) 8.dp else 10.dp),
             horizontalArrangement = Arrangement.spacedBy(if (isSmall) 8.dp else 14.dp)
         ) {
 
@@ -756,26 +945,49 @@ private fun BarraCobro(
                                 efectivoText = clean
                                 onEfectivo(clean.replace(',', '.').toDoubleOrNull())
                             },
-                            label = { Text("Efectivo entregado (€)") },
+                            label = { Text(if (isSmall) "Entregado (€)" else "Efectivo entregado (€)") },
                             leadingIcon = { Icon(Icons.Default.Payments, null) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            listOf(5, 10, 20, 50).forEach { b ->
-                                AssistChip(
-                                    onClick = {
-                                        val nuevo = (efectivoEntregado ?: 0.0) + b
-                                        onEfectivo(nuevo)
-                                        efectivoText = "%.2f".format(nuevo)
-                                    },
-                                    label = { Text("+$b€") },
-                                    modifier = Modifier.weight(1f)
-                                )
+                        if (isSmall) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                listOf(listOf(5, 10), listOf(20, 50)).forEach { fila ->
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        fila.forEach { b ->
+                                            AssistChip(
+                                                onClick = {
+                                                    val nuevo = (efectivoEntregado ?: 0.0) + b
+                                                    onEfectivo(nuevo)
+                                                    efectivoText = "%.2f".format(nuevo)
+                                                },
+                                                label = { Text("+$b€") },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                listOf(5, 10, 20, 50).forEach { b ->
+                                    AssistChip(
+                                        onClick = {
+                                            val nuevo = (efectivoEntregado ?: 0.0) + b
+                                            onEfectivo(nuevo)
+                                            efectivoText = "%.2f".format(nuevo)
+                                        },
+                                        label = { Text("+$b€") },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
                             }
                         }
                         val diff = (efectivoEntregado ?: 0.0) - total
@@ -850,16 +1062,26 @@ private fun BarraCobro(
                         val selected = metodoPago == nombre
                         ElevatedButton(
                             onClick = { onMetodo(nombre) },
-                            modifier = Modifier.weight(1f).height(if (isSmall) 36.dp else 44.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                            modifier = Modifier.weight(1f).height(if (isSmall) 52.dp else 44.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                             colors = if (selected)
                                 ButtonDefaults.elevatedButtonColors(containerColor = teal, contentColor = onTeal)
                             else
                                 ButtonDefaults.elevatedButtonColors()
                         ) {
-                            Icon(icono, null, Modifier.size(14.dp))
-                            Spacer(Modifier.width(3.dp))
-                            Text(label, style = MaterialTheme.typography.labelSmall)
+                            if (isSmall) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(icono, null, Modifier.size(16.dp))
+                                    Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                                }
+                            } else {
+                                Icon(icono, null, Modifier.size(14.dp))
+                                Spacer(Modifier.width(3.dp))
+                                Text(label, style = MaterialTheme.typography.labelSmall)
+                            }
                         }
                     }
                 }

@@ -22,8 +22,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.loadImageBitmap
-import androidx.compose.ui.res.useResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -32,18 +30,20 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import org.joan.project.service.cargarImagenLocalBitmap
+import org.joan.project.service.cargarLogoBitmapDesdeRecursos
+import org.joan.project.util.ServerConfig
 import org.joan.project.viewmodel.AuthViewModel
 import org.joan.project.viewmodel.LoginState
 import org.joan.project.viewmodel.NegocioViewModel
 import org.koin.compose.koinInject
-import java.io.File
-import java.io.InputStream
 
 @Composable
 fun PantallaLogin(
     onLoginSuccess: () -> Unit,
     authViewModel: AuthViewModel = koinInject(),
-    negocioViewModel: NegocioViewModel = koinInject()
+    negocioViewModel: NegocioViewModel = koinInject(),
+    serverConfig: ServerConfig = koinInject()
 ) {
     // Estado UI
     var usuario by remember { mutableStateOf("") }
@@ -51,6 +51,8 @@ fun PantallaLogin(
     var showPassword by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(true) }
     var attempted by remember { mutableStateOf(false) }
+    var showServerConfig by remember { mutableStateOf(false) }
+    var serverUrlDraft by remember { mutableStateOf(serverConfig.url) }
 
     val loginState by authViewModel.loginState.collectAsState()
     val negocio by negocioViewModel.datos.collectAsState()
@@ -216,6 +218,64 @@ fun PantallaLogin(
                         }
                     }
 
+                    // Configuración del servidor
+                    TextButton(
+                        onClick = { showServerConfig = !showServerConfig },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isLoading
+                    ) {
+                        Text(
+                            if (showServerConfig) "Ocultar configuración del servidor"
+                            else "Configurar servidor",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = .6f)
+                        )
+                    }
+
+                    if (showServerConfig) {
+                        OutlinedTextField(
+                            value = serverUrlDraft,
+                            onValueChange = { serverUrlDraft = it },
+                            label = { Text("URL del servidor") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !isLoading,
+                            placeholder = { Text("http://192.168.1.12:8080") },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Uri,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    focusManager.clearFocus()
+                                    if (serverUrlDraft.isNotBlank()) serverConfig.setUrl(serverUrlDraft)
+                                }
+                            )
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    serverConfig.reset()
+                                    serverUrlDraft = serverConfig.url
+                                },
+                                modifier = Modifier.weight(1f),
+                                enabled = !isLoading
+                            ) { Text("Restablecer") }
+                            Button(
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    if (serverUrlDraft.isNotBlank()) serverConfig.setUrl(serverUrlDraft)
+                                    showServerConfig = false
+                                },
+                                modifier = Modifier.weight(1f),
+                                enabled = !isLoading && serverUrlDraft.isNotBlank()
+                            ) { Text("Guardar") }
+                        }
+                    }
+
                     // Botón de acción
                     Button(
                         onClick = {
@@ -261,15 +321,9 @@ fun PantallaLogin(
 private fun LogoRedondo(logoPath: String? = null) {
     val logoPainter = remember(logoPath) {
         if (logoPath != null) {
-            // Logo personalizado desde archivo
-            runCatching {
-                BitmapPainter(File(logoPath).inputStream().buffered().use { loadImageBitmap(it) })
-            }.getOrNull()
+            cargarImagenLocalBitmap(logoPath)?.let { BitmapPainter(it) }
         } else {
-            // Fallback al recurso logo.png del classpath
-            runCatching {
-                BitmapPainter(useResource("logo.png") { input: InputStream -> loadImageBitmap(input) })
-            }.getOrNull()
+            cargarLogoBitmapDesdeRecursos()?.let { BitmapPainter(it) }
         }
     }
 

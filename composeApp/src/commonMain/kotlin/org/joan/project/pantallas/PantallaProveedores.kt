@@ -70,7 +70,8 @@ fun PantallaProveedores(
     }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-    val isSmall = maxWidth < 1024.dp
+    val isMobile = maxWidth < 600.dp
+    val isSmall  = maxWidth < 1024.dp
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -91,13 +92,23 @@ fun PantallaProveedores(
                     .weight(1f)
                     .padding(start = 4.dp)
             )
-            FilledTonalButton(
-                enabled = token != null,
-                onClick = { editTarget = null; showForm = true } // crear
-            ) {
-                Icon(Icons.Outlined.Add, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text("Agregar proveedor")
+            if (isMobile) {
+                FilledTonalIconButton(
+                    enabled = token != null,
+                    onClick = { editTarget = null; showForm = true },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(Icons.Outlined.Add, contentDescription = "Agregar proveedor")
+                }
+            } else {
+                FilledTonalButton(
+                    enabled = token != null,
+                    onClick = { editTarget = null; showForm = true }
+                ) {
+                    Icon(Icons.Outlined.Add, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Agregar proveedor")
+                }
             }
         }
 

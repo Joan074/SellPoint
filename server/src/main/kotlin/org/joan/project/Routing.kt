@@ -40,6 +40,12 @@ fun Application.configureRouting(
             ))
         }
 
+        // TODO: ELIMINAR ANTES DE PRODUCCIÓN — endpoint de depuración sin autenticación
+        get("/debug/productos") {
+            val productos = productoRepo.getAll().take(5)
+            call.respond(productos)
+        }
+
         // Autenticación
         post("/auth/login") {
             val loginRequest = call.receive<EmpleadoLoginRequest>()
@@ -248,23 +254,30 @@ fun Application.configureRouting(
 
                 put("/{id}") {
                     val id = call.parameters["id"]?.toIntOrNull()
-                    val request = call.receive<ProductoRequest>()
                     if (id == null) {
-                        call.respond(HttpStatusCode.BadRequest, "ID inválido")
+                        call.respond(HttpStatusCode.BadRequest, ErrorResponse(400, "ID inválido"))
                         return@put
                     }
-
-                    val actualizado = productoRepo.update(id, request)
-                    if (!actualizado) {
-                        call.respond(HttpStatusCode.NotFound, "No se pudo actualizar")
-                        return@put
-                    }
-
-                    val productoActualizado = productoRepo.getById(id)
-                    if (productoActualizado != null) {
-                        call.respond(productoActualizado) // ✅ Devuelve JSON
-                    } else {
-                        call.respond(HttpStatusCode.InternalServerError, "No se pudo recuperar el producto actualizado")
+                    try {
+                        val request = call.receive<ProductoRequest>()
+                        val actualizado = productoRepo.update(id, request)
+                        if (!actualizado) {
+                            call.respond(HttpStatusCode.NotFound, ErrorResponse(404, "Producto no encontrado"))
+                            return@put
+                        }
+                        val productoActualizado = productoRepo.getById(id)
+                        if (productoActualizado != null) {
+                            call.respond(productoActualizado)
+                        } else {
+                            call.respond(HttpStatusCode.NotFound, ErrorResponse(404, "Producto no encontrado tras actualizar"))
+                        }
+                    } catch (e: IllegalArgumentException) {
+                        println("PUT /producto/$id - IllegalArgumentException: ${e.message}")
+                        call.respond(HttpStatusCode.Conflict, ErrorResponse(409, e.message ?: "Datos inválidos"))
+                    } catch (e: Exception) {
+                        println("PUT /producto/$id - Exception: ${e::class.simpleName}: ${e.message}")
+                        e.printStackTrace()
+                        call.respond(HttpStatusCode.InternalServerError, ErrorResponse(500, e.message ?: "Error interno"))
                     }
                 }
 
@@ -435,7 +448,7 @@ fun Application.configureRouting(
 
                 post {
                     val request = call.receive<CategoriaRequest>()
-                    val nueva = categoriaRepo.crearCategoria(request.nombre)
+                    val nueva = categoriaRepo.crearCategoria(request.nombre, request.imagenUrl)
                     call.respond(HttpStatusCode.Created, nueva)
                 }
 
@@ -447,7 +460,7 @@ fun Application.configureRouting(
                         return@put
                     }
 
-                    val actualizado = categoriaRepo.actualizarCategoria(id, request.nombre)
+                    val actualizado = categoriaRepo.actualizarCategoria(id, request.nombre, request.imagenUrl)
                     if (actualizado) {
                         call.respond(mapOf("mensaje" to "Categoría actualizada"))
                     } else {

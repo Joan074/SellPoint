@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
@@ -21,14 +20,11 @@ import kotlinx.coroutines.withContext
 import org.joan.project.db.entidades.ProductoResponse
 import org.joan.project.db.entidades.ProductoRequest
 import org.joan.project.service.SupabaseStorageService
+import org.joan.project.service.seleccionarImagenBytes
+import org.joan.project.service.imagenBitmapDeBytes
 import org.joan.project.ui.ProductoImagen
 import org.joan.project.viewmodel.ProductoViewModel
 import org.koin.compose.koinInject
-import java.io.File
-import java.util.concurrent.CompletableFuture
-import javax.swing.JFileChooser
-import javax.swing.filechooser.FileNameExtensionFilter
-import org.jetbrains.skia.Image as SkiaImage
 
 @Composable
 fun PantallaEditarProducto(
@@ -54,7 +50,7 @@ fun PantallaEditarProducto(
     var errorGlobal by remember { mutableStateOf<String?>(null) }
 
     val isFormValid = nombre.isNotBlank() &&
-            precio.toDoubleOrNull() != null &&
+            precio.replace(',', '.').toDoubleOrNull() != null &&
             stock.toIntOrNull() != null &&
             categoriaId.toIntOrNull() != null &&
             proveedorId.toIntOrNull() != null
@@ -113,7 +109,7 @@ fun PantallaEditarProducto(
                         onValueChange = { precio = it },
                         label = { Text("Precio*") },
                         keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                        isError = showError && precio.toDoubleOrNull() == null,
+                        isError = showError && precio.replace(',', '.').toDoubleOrNull() == null,
                         singleLine = true
                     )
 
@@ -154,31 +150,14 @@ fun PantallaEditarProducto(
                     Button(
                         onClick = {
                             scope.launch {
-                                val future = CompletableFuture<File?>()
-                                javax.swing.SwingUtilities.invokeLater {
-                                    val chooser = JFileChooser()
-                                    chooser.dialogTitle = "Cambiar imagen del producto"
-                                    chooser.fileFilter = FileNameExtensionFilter(
-                                        "Imágenes (JPG, PNG, WEBP)", "jpg", "jpeg", "png", "webp"
-                                    )
-                                    val result = chooser.showOpenDialog(null)
-                                    future.complete(
-                                        if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
-                                    )
-                                }
-                                val archivo = withContext(Dispatchers.IO) { future.get() }
-                                    ?: return@launch
+                                val bytes = seleccionarImagenBytes() ?: return@launch
+                                imagenBitmap = imagenBitmapDeBytes(bytes)
 
-                                // Preview local inmediato
-                                val bytes = withContext(Dispatchers.IO) { archivo.readBytes() }
-                                imagenBitmap = SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
-
-                                // Subir a Supabase Storage
                                 subiendoImagen = true
                                 errorGlobal = null
                                 try {
                                     imagenUrl = withContext(Dispatchers.IO) {
-                                        supabaseStorageService.subirImagen(archivo)
+                                        supabaseStorageService.subirImagen(bytes)
                                     }
                                 } catch (e: Exception) {
                                     errorGlobal = "Error al subir imagen: ${e.message}"
@@ -237,7 +216,7 @@ fun PantallaEditarProducto(
                 if (isFormValid) {
                     val req = ProductoRequest(
                         nombre = nombre,
-                        precio = precio.toDouble(),
+                        precio = precio.replace(',', '.').toDouble(),
                         stock = stock.toInt(),
                         codigoBarras = if (codigoBarras.isBlank()) null else codigoBarras,
                         categoriaId = categoriaId.toInt(),

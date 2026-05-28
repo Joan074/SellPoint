@@ -67,22 +67,24 @@ fun PantallaInicio(
         BackgroundDecor()
 
         BoxWithConstraints(Modifier.fillMaxSize()) {
+            val isMobile = maxWidth < 600.dp
             val isSmall  = maxWidth < 1024.dp
-            val numCols  = (maxWidth / 220.dp).toInt().coerceIn(1, 4)
+            val numCols  = if (isMobile) 1 else (maxWidth / 220.dp).toInt().coerceIn(2, 4)
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 28.dp, vertical = 20.dp)
+                    .padding(horizontal = if (isMobile) 12.dp else 28.dp, vertical = 20.dp)
             ) {
-                InicioHeader(
-                    userName       = userName,
-                    onCerrarSesion = onCerrarSesion,
-                    onAjustesClick = onAjustesClick
-                )
-
-                Spacer(Modifier.height(10.dp))
+                if (!isMobile) {
+                    InicioHeader(
+                        userName       = userName,
+                        onCerrarSesion = onCerrarSesion,
+                        onAjustesClick = onAjustesClick
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
 
                 StatsRow(
                     totalProductos  = totalProductos,
@@ -90,6 +92,7 @@ fun PantallaInicio(
                     bajoStock       = bajoStock,
                     ventasHoy       = ventasHoy,
                     currency        = currency,
+                    isMobile        = isMobile,
                     isSmall         = isSmall
                 )
 
@@ -98,7 +101,8 @@ fun PantallaInicio(
                 QuickActionsRow(
                     onCrearProducto = onCrearProducto,
                     onNuevaVenta    = onNuevaVenta,
-                    onSincronizar   = onSincronizar
+                    onSincronizar   = onSincronizar,
+                    isMobile        = isMobile
                 )
 
                 Spacer(Modifier.height(18.dp))
@@ -119,10 +123,10 @@ fun PantallaInicio(
                 }
 
                 val filas = menuItems.chunked(numCols)
-                Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(if (isMobile) 10.dp else 18.dp)) {
                     filas.forEach { fila ->
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(18.dp),
+                            horizontalArrangement = Arrangement.spacedBy(if (isMobile) 0.dp else 18.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             fila.forEach { item ->
@@ -132,6 +136,7 @@ fun PantallaInicio(
                                     icon        = item.icon,
                                     accentColor = item.accentColor,
                                     onClick     = { onSeleccion(item.dest) },
+                                    isMobile    = isMobile,
                                     modifier    = Modifier.weight(1f)
                                 )
                             }
@@ -155,11 +160,13 @@ fun PantallaInicio(
                         UltimasVentasCard(
                             ventas    = ultimasVentasHoy,
                             onClick   = { onSeleccion(Pantalla.ReporteVentas) },
+                            isMobile  = isMobile,
                             modifier  = Modifier.fillMaxWidth()
                         )
                         BajoStockCard(
                             productos = productosBajoStock,
                             onClick   = { onSeleccion(Pantalla.Listado) },
+                            isMobile  = isMobile,
                             modifier  = Modifier.fillMaxWidth()
                         )
                     }
@@ -193,6 +200,7 @@ fun PantallaInicio(
 private fun UltimasVentasCard(
     ventas: List<VentaResponse>,
     onClick: () -> Unit,
+    isMobile: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     DashboardCard(
@@ -200,6 +208,7 @@ private fun UltimasVentasCard(
         icono    = Icons.Default.PointOfSale,
         accion   = "Ver reportes",
         onClick  = onClick,
+        isMobile = isMobile,
         modifier = modifier
     ) {
         if (ventas.isEmpty()) {
@@ -284,6 +293,7 @@ private fun VentaRow(venta: VentaResponse) {
 private fun BajoStockCard(
     productos: List<ProductoResponse>,
     onClick: () -> Unit,
+    isMobile: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     DashboardCard(
@@ -291,6 +301,7 @@ private fun BajoStockCard(
         icono    = Icons.Default.Warning,
         accion   = "Ver productos",
         onClick  = onClick,
+        isMobile = isMobile,
         modifier = modifier
     ) {
         if (productos.isEmpty()) {
@@ -366,13 +377,14 @@ private fun DashboardCard(
     icono: ImageVector,
     accion: String,
     onClick: () -> Unit,
+    isMobile: Boolean = false,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
     ElevatedCard(
         onClick   = onClick,
         shape     = RoundedCornerShape(18.dp),
-        elevation = CardDefaults.elevatedCardElevation(4.dp),
+        elevation = CardDefaults.elevatedCardElevation(if (isMobile) 2.dp else 4.dp),
         modifier  = modifier
     ) {
         Column(Modifier.padding(16.dp)) {
@@ -521,16 +533,37 @@ private fun StatsRow(
     bajoStock: Int,
     ventasHoy: Double,
     currency: String,
+    isMobile: Boolean = false,
     isSmall: Boolean = false
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        KpiCard(icon = Icons.Default.Inventory,   label = "Productos",    value = totalProductos.toString(),           isSmall = isSmall, modifier = Modifier.weight(1f))
-        KpiCard(icon = Icons.Default.AttachMoney, label = "Inventario",   value = formatMoney(valorInventario, currency), isSmall = isSmall, modifier = Modifier.weight(1f))
-        KpiCard(icon = Icons.Default.Warning,     label = "Bajo stock",   value = bajoStock.toString(),                tone = KpiTone.Warning, isSmall = isSmall, modifier = Modifier.weight(1f))
-        KpiCard(icon = Icons.Default.PointOfSale, label = "Ventas hoy",   value = formatMoney(ventasHoy, currency),    isSmall = isSmall, modifier = Modifier.weight(1f))
+    if (isMobile) {
+        // 2x2 grid en móvil
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                KpiCard(icon = Icons.Default.Inventory,   label = "Productos",  value = totalProductos.toString(),              isMobile = true, modifier = Modifier.weight(1f))
+                KpiCard(icon = Icons.Default.AttachMoney, label = "Inventario", value = formatMoney(valorInventario, currency),  isMobile = true, modifier = Modifier.weight(1f))
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                KpiCard(icon = Icons.Default.Warning,     label = "Bajo stock", value = bajoStock.toString(),                   tone = KpiTone.Warning, isMobile = true, modifier = Modifier.weight(1f))
+                KpiCard(icon = Icons.Default.PointOfSale, label = "Ventas hoy", value = formatMoney(ventasHoy, currency),       isMobile = true, modifier = Modifier.weight(1f))
+            }
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            KpiCard(icon = Icons.Default.Inventory,   label = "Productos",    value = totalProductos.toString(),              isSmall = isSmall, modifier = Modifier.weight(1f))
+            KpiCard(icon = Icons.Default.AttachMoney, label = "Inventario",   value = formatMoney(valorInventario, currency), isSmall = isSmall, modifier = Modifier.weight(1f))
+            KpiCard(icon = Icons.Default.Warning,     label = "Bajo stock",   value = bajoStock.toString(),                  tone = KpiTone.Warning, isSmall = isSmall, modifier = Modifier.weight(1f))
+            KpiCard(icon = Icons.Default.PointOfSale, label = "Ventas hoy",   value = formatMoney(ventasHoy, currency),      isSmall = isSmall, modifier = Modifier.weight(1f))
+        }
     }
 }
 
@@ -542,31 +575,49 @@ private fun KpiCard(
     label: String,
     value: String,
     tone: KpiTone = KpiTone.Normal,
+    isMobile: Boolean = false,
     isSmall: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val bg       = if (tone == KpiTone.Warning) MaterialTheme.colorScheme.errorContainer     else MaterialTheme.colorScheme.secondaryContainer
-    val fg       = if (tone == KpiTone.Warning) MaterialTheme.colorScheme.onErrorContainer   else MaterialTheme.colorScheme.onSecondaryContainer
-    val iconTint = if (tone == KpiTone.Warning) MaterialTheme.colorScheme.onErrorContainer   else MaterialTheme.colorScheme.tertiary
+    val bg       = if (tone == KpiTone.Warning) MaterialTheme.colorScheme.errorContainer   else MaterialTheme.colorScheme.secondaryContainer
+    val fg       = if (tone == KpiTone.Warning) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
+    val iconTint = if (tone == KpiTone.Warning) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.tertiary
 
     ElevatedCard(
-        modifier  = modifier.height(if (isSmall) 64.dp else 82.dp),
+        modifier  = modifier.height(if (isMobile) 70.dp else if (isSmall) 64.dp else 82.dp),
         shape     = RoundedCornerShape(14.dp),
-        elevation = CardDefaults.elevatedCardElevation(3.dp),
+        elevation = CardDefaults.elevatedCardElevation(if (isMobile) 2.dp else 3.dp),
         colors    = CardDefaults.elevatedCardColors(containerColor = bg)
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.size(34.dp).clip(CircleShape).background(iconTint.copy(alpha = .15f)),
-                contentAlignment = Alignment.Center
-            ) { Icon(icon, null, tint = iconTint) }
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text(label, style = MaterialTheme.typography.labelMedium, color = fg.copy(alpha = .85f))
-                Text(value, style = MaterialTheme.typography.titleMedium, color = fg)
+        if (isMobile) {
+            // Layout vertical en móvil: icono arriba, texto abajo
+            Column(
+                modifier = Modifier.fillMaxSize().padding(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier.size(28.dp).clip(CircleShape).background(iconTint.copy(alpha = .15f)),
+                    contentAlignment = Alignment.Center
+                ) { Icon(icon, null, tint = iconTint, modifier = Modifier.size(18.dp)) }
+                Spacer(Modifier.height(4.dp))
+                Text(label, style = MaterialTheme.typography.labelSmall, color = fg.copy(alpha = .85f))
+                Text(value, style = MaterialTheme.typography.titleSmall, color = fg, fontWeight = FontWeight.Bold)
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.size(34.dp).clip(CircleShape).background(iconTint.copy(alpha = .15f)),
+                    contentAlignment = Alignment.Center
+                ) { Icon(icon, null, tint = iconTint) }
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(label, style = MaterialTheme.typography.labelMedium, color = fg.copy(alpha = .85f))
+                    Text(value, style = MaterialTheme.typography.titleMedium, color = fg)
+                }
             }
         }
     }
@@ -579,15 +630,18 @@ private fun formatMoney(amount: Double, currency: String): String =
 private fun QuickActionsRow(
     onCrearProducto: () -> Unit,
     onNuevaVenta: () -> Unit,
-    onSincronizar: () -> Unit
+    onSincronizar: () -> Unit,
+    isMobile: Boolean = false
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment     = Alignment.CenterVertically
     ) {
-        AssistChip(onClick = onCrearProducto, label = { Text("Crear producto") }, leadingIcon = { Icon(Icons.Default.Add, null) })
-        AssistChip(onClick = onNuevaVenta,    label = { Text("Nueva venta") },    leadingIcon = { Icon(Icons.Default.PointOfSale, null) })
-        AssistChip(onClick = onSincronizar,   label = { Text("Sincronizar") },    leadingIcon = { Icon(Icons.Default.Sync, null) })
+        AssistChip(onClick = onNuevaVenta,    label = { Text("Nueva venta") },    leadingIcon = { Icon(Icons.Default.PointOfSale, null, Modifier.size(16.dp)) })
+        AssistChip(onClick = onCrearProducto, label = { Text("Crear producto") }, leadingIcon = { Icon(Icons.Default.Add, null, Modifier.size(16.dp)) })
+        if (!isMobile) {
+            AssistChip(onClick = onSincronizar, label = { Text("Sincronizar") }, leadingIcon = { Icon(Icons.Default.Sync, null, Modifier.size(16.dp)) })
+        }
     }
 }
 
@@ -598,6 +652,7 @@ private fun ActionCard(
     icon: ImageVector,
     accentColor: Color,
     onClick: () -> Unit,
+    isMobile: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -607,10 +662,10 @@ private fun ActionCard(
     ElevatedCard(
         modifier  = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .height(160.dp)
+            .height(if (isMobile) 110.dp else 160.dp)
             .clickable(interactionSource = interaction, indication = LocalIndication.current) { onClick() },
         shape     = RoundedCornerShape(22.dp),
-        elevation = CardDefaults.elevatedCardElevation(10.dp),
+        elevation = CardDefaults.elevatedCardElevation(if (isMobile) 2.dp else 10.dp),
         colors    = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Box(modifier = Modifier.fillMaxWidth().height(5.dp).background(accentColor))
